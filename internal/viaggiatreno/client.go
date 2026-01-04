@@ -18,15 +18,25 @@ const (
 	defaultTimeout = 10 * time.Second
 )
 
-// Client is an HTTP client for the ViaggiaTreno API.
-type Client struct {
+// Client defines the interface for ViaggiaTreno API operations.
+type Client interface {
+	AutocompletaStazione(ctx context.Context, prefix string) ([]Station, error)
+	CercaStazione(ctx context.Context, prefix string) ([]StationDetail, error)
+	CercaNumeroTreno(ctx context.Context, trainNumber string) ([]TrainMatch, error)
+	Partenze(ctx context.Context, stationID string, when time.Time) ([]Departure, error)
+	Arrivi(ctx context.Context, stationID string, when time.Time) ([]Arrival, error)
+	AndamentoTreno(ctx context.Context, originID string, trainNumber string, departureTS int64) (*TrainStatus, error)
+}
+
+// HTTPClient is an HTTP client for the ViaggiaTreno API.
+type HTTPClient struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-// NewClient creates a new ViaggiaTreno API client.
-func NewClient() *Client {
-	return &Client{
+// NewHTTPClient creates a new ViaggiaTreno API client.
+func NewHTTPClient() *HTTPClient {
+	return &HTTPClient{
 		baseURL: defaultBaseURL,
 		httpClient: &http.Client{
 			Timeout: defaultTimeout,
@@ -35,20 +45,20 @@ func NewClient() *Client {
 }
 
 // WithBaseURL sets a custom base URL for testing.
-func (c *Client) WithBaseURL(url string) *Client {
+func (c *HTTPClient) WithBaseURL(url string) *HTTPClient {
 	c.baseURL = url
 	return c
 }
 
 // WithHTTPClient sets a custom HTTP client.
-func (c *Client) WithHTTPClient(client *http.Client) *Client {
+func (c *HTTPClient) WithHTTPClient(client *http.Client) *HTTPClient {
 	c.httpClient = client
 	return c
 }
 
 // AutocompletaStazione searches for stations by prefix.
 // Returns a list of matching stations with their IDs.
-func (c *Client) AutocompletaStazione(ctx context.Context, prefix string) ([]Station, error) {
+func (c *HTTPClient) AutocompletaStazione(ctx context.Context, prefix string) ([]Station, error) {
 	endpoint := fmt.Sprintf("%s/autocompletaStazione/%s", c.baseURL, url.PathEscape(prefix))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -92,7 +102,7 @@ func (c *Client) AutocompletaStazione(ctx context.Context, prefix string) ([]Sta
 }
 
 // CercaStazione searches for stations and returns detailed info as JSON.
-func (c *Client) CercaStazione(ctx context.Context, prefix string) ([]StationDetail, error) {
+func (c *HTTPClient) CercaStazione(ctx context.Context, prefix string) ([]StationDetail, error) {
 	endpoint := fmt.Sprintf("%s/cercaStazione/%s", c.baseURL, url.PathEscape(prefix))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -124,7 +134,7 @@ func (c *Client) CercaStazione(ctx context.Context, prefix string) ([]StationDet
 
 // CercaNumeroTreno finds trains by number.
 // Returns matches when multiple trains share the same number (different origins).
-func (c *Client) CercaNumeroTreno(ctx context.Context, trainNumber string) ([]TrainMatch, error) {
+func (c *HTTPClient) CercaNumeroTreno(ctx context.Context, trainNumber string) ([]TrainMatch, error) {
 	endpoint := fmt.Sprintf("%s/cercaNumeroTrenoTrenoAutocomplete/%s", c.baseURL, url.PathEscape(trainNumber))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -188,7 +198,7 @@ func (c *Client) CercaNumeroTreno(ctx context.Context, trainNumber string) ([]Tr
 }
 
 // Partenze gets departures from a station.
-func (c *Client) Partenze(ctx context.Context, stationID string, when time.Time) ([]Departure, error) {
+func (c *HTTPClient) Partenze(ctx context.Context, stationID string, when time.Time) ([]Departure, error) {
 	timeStr := formatViaggiatrenoTime(when)
 	endpoint := fmt.Sprintf("%s/partenze/%s/%s", c.baseURL, url.PathEscape(stationID), url.PathEscape(timeStr))
 
@@ -221,7 +231,7 @@ func (c *Client) Partenze(ctx context.Context, stationID string, when time.Time)
 }
 
 // Arrivi gets arrivals at a station.
-func (c *Client) Arrivi(ctx context.Context, stationID string, when time.Time) ([]Arrival, error) {
+func (c *HTTPClient) Arrivi(ctx context.Context, stationID string, when time.Time) ([]Arrival, error) {
 	timeStr := formatViaggiatrenoTime(when)
 	endpoint := fmt.Sprintf("%s/arrivi/%s/%s", c.baseURL, url.PathEscape(stationID), url.PathEscape(timeStr))
 
@@ -253,7 +263,7 @@ func (c *Client) Arrivi(ctx context.Context, stationID string, when time.Time) (
 }
 
 // AndamentoTreno gets the full journey status of a train.
-func (c *Client) AndamentoTreno(ctx context.Context, originID string, trainNumber string, departureTS int64) (*TrainStatus, error) {
+func (c *HTTPClient) AndamentoTreno(ctx context.Context, originID string, trainNumber string, departureTS int64) (*TrainStatus, error) {
 	endpoint := fmt.Sprintf("%s/andamentoTreno/%s/%s/%d",
 		c.baseURL,
 		url.PathEscape(originID),

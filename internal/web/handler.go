@@ -14,13 +14,13 @@ import (
 )
 
 type Handler struct {
-	vtClient         *viaggiatreno.Client
+	vtClient         viaggiatreno.Client
 	stationService   *station.Service
 	watchlistService *watchlist.Service
 }
 
 func NewHandler(
-	vtClient *viaggiatreno.Client,
+	vtClient viaggiatreno.Client,
 	stationService *station.Service,
 	watchlistService *watchlist.Service,
 ) *Handler {

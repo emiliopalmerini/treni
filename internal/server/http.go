@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/emiliopalmerini/treni/internal/app"
+	"github.com/emiliopalmerini/treni/internal/cache"
 	"github.com/emiliopalmerini/treni/internal/journey"
 	journeyPersistence "github.com/emiliopalmerini/treni/internal/journey/persistence"
 	"github.com/emiliopalmerini/treni/internal/middleware"
@@ -29,8 +30,10 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 
 	r.Get("/health", Health)
 
-	// Initialize ViaggiaTreno client
-	vtClient := viaggiatreno.NewClient()
+	// Initialize cache and ViaggiaTreno client
+	memCache := cache.NewMemory()
+	httpClient := viaggiatreno.NewHTTPClient()
+	vtClient := viaggiatreno.NewCachedClient(httpClient, memCache, cache.DefaultTTLConfig())
 
 	// Station module
 	stationRepo := stationPersistence.NewSQLiteRepository(db)

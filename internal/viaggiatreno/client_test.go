@@ -9,7 +9,7 @@ import (
 )
 
 func TestAutocompletaStazione(t *testing.T) {
-	client := viaggiatreno.NewClient()
+	client := viaggiatreno.NewHTTPClient()
 	ctx := context.Background()
 
 	stations, err := client.AutocompletaStazione(ctx, "MILANO")
@@ -35,7 +35,7 @@ func TestAutocompletaStazione(t *testing.T) {
 }
 
 func TestCercaNumeroTreno(t *testing.T) {
-	client := viaggiatreno.NewClient()
+	client := viaggiatreno.NewHTTPClient()
 	ctx := context.Background()
 
 	matches, err := client.CercaNumeroTreno(ctx, "9600")
@@ -54,7 +54,7 @@ func TestCercaNumeroTreno(t *testing.T) {
 }
 
 func TestPartenze(t *testing.T) {
-	client := viaggiatreno.NewClient()
+	client := viaggiatreno.NewHTTPClient()
 	ctx := context.Background()
 
 	departures, err := client.Partenze(ctx, "S01700", time.Now())

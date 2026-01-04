@@ -12,10 +12,10 @@ import (
 )
 
 type Handler struct {
-	client *viaggiatreno.Client
+	client viaggiatreno.Client
 }
 
-func NewHandler(client *viaggiatreno.Client) *Handler {
+func NewHandler(client viaggiatreno.Client) *Handler {
 	return &Handler{client: client}
 }
 

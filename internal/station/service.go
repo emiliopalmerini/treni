@@ -8,10 +8,10 @@ import (
 
 type Service struct {
 	repo   StationRepository
-	client *viaggiatreno.Client
+	client viaggiatreno.Client
 }
 
-func NewService(repo StationRepository, client *viaggiatreno.Client) *Service {
+func NewService(repo StationRepository, client viaggiatreno.Client) *Service {
 	return &Service{repo: repo, client: client}
 }
 
