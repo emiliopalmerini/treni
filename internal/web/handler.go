@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -94,10 +95,22 @@ func (h *Handler) GetFavoriteStations(w http.ResponseWriter, r *http.Request) {
 	views.FavoriteStations(stationViews).Render(r.Context(), w)
 }
 
-func (h *Handler) ImportStation(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	_, err := h.stationService.Import(r.Context(), id)
-	if err != nil {
+func (h *Handler) AddFavoriteStation(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	station := &station.Station{
+		ID:         req.ID,
+		Name:       req.Name,
+		IsFavorite: true,
+	}
+	if err := h.stationService.Create(r.Context(), station); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
