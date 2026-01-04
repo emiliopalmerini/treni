@@ -86,7 +86,7 @@ func (s *Service) RecordFromAPI(ctx context.Context, originID, trainNumber strin
 			StationName:    stop.StationName,
 			ArrivalDelay:   stop.ArrivalDelay,
 			DepartureDelay: stop.DepartureDelay,
-			Platform:       stop.Platform,
+			Platform:       stop.EffectivePlatform(),
 		}
 		if stop.ScheduledArrival > 0 {
 			t := time.UnixMilli(stop.ScheduledArrival)

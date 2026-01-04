@@ -39,7 +39,7 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 			DestinationName:  d.Destination,
 			ScheduledTime:    time.UnixMilli(d.DepartureTime),
 			Delay:            d.Delay,
-			Platform:         d.Platform,
+			Platform:         d.EffectivePlatform(),
 			CirculationState: d.CirculationState,
 		}
 		entities = append(entities, entity)
@@ -71,7 +71,7 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 			DestinationName:  a.Destination,
 			ScheduledTime:    time.UnixMilli(a.ArrivalTime),
 			Delay:            a.Delay,
-			Platform:         a.Platform,
+			Platform:         a.EffectivePlatform(),
 			CirculationState: a.CirculationState,
 		}
 		entities = append(entities, entity)
