@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"net/http"
 
 	"github.com/emiliopalmerini/treni/internal/app"
+	"github.com/emiliopalmerini/treni/internal/database"
 	"github.com/emiliopalmerini/treni/internal/server"
 )
 
@@ -18,7 +19,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	httpSrv := server.NewHTTPServer(cfg)
+	db, err := database.Open(cfg.DatabasePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	httpSrv := server.NewHTTPServer(cfg, db)
 	go func() {
 		log.Printf("http server listening on %s", cfg.Addr)
 		if err := httpSrv.ListenAndServe(); err != http.ErrServerClosed {

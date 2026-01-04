@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Addr            string        `envconfig:"ADDR" default:":8080"`
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"5s"`
+	DatabasePath    string        `envconfig:"DATABASE_PATH" default:"treni.db"`
 }
 
 func New() (*Config, error) {
