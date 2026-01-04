@@ -7,174 +7,178 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/journey"
 )
 
 type SQLiteRepository struct {
-	db *sql.DB
+	q *sqlc.Queries
 }
 
 func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
-	return &SQLiteRepository{db: db}
+	return &SQLiteRepository{q: sqlc.New(db)}
 }
 
 func (r *SQLiteRepository) Create(ctx context.Context, entity *journey.Journey) error {
-	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO journey (id, train_number, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_departure, actual_departure, delay, recorded_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		entity.ID.String(), entity.TrainNumber, entity.OriginID, entity.OriginName,
-		entity.DestinationID, entity.DestinationName, entity.ScheduledDeparture,
-		entity.ActualDeparture, entity.Delay, entity.RecordedAt)
-	return err
+	return r.q.CreateJourney(ctx, sqlc.CreateJourneyParams{
+		ID:                 entity.ID.String(),
+		TrainNumber:        int64(entity.TrainNumber),
+		OriginID:           entity.OriginID,
+		OriginName:         entity.OriginName,
+		DestinationID:      entity.DestinationID,
+		DestinationName:    entity.DestinationName,
+		ScheduledDeparture: &entity.ScheduledDeparture,
+		ActualDeparture:    timePtr(entity.ActualDeparture),
+		Delay:              ptr(int64(entity.Delay)),
+		RecordedAt:         entity.RecordedAt,
+	})
 }
 
 func (r *SQLiteRepository) GetByID(ctx context.Context, id uuid.UUID) (*journey.Journey, error) {
-	row := r.db.QueryRowContext(ctx,
-		`SELECT id, train_number, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_departure, actual_departure, delay, recorded_at
-		 FROM journey WHERE id = ?`, id.String())
-
-	return scanJourney(row)
+	row, err := r.q.GetJourneyByID(ctx, id.String())
+	if err != nil {
+		return nil, err
+	}
+	return sqlcJourneyToJourney(row), nil
 }
 
 func (r *SQLiteRepository) List(ctx context.Context) ([]*journey.Journey, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, train_number, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_departure, actual_departure, delay, recorded_at
-		 FROM journey ORDER BY recorded_at DESC LIMIT 100`)
+	rows, err := r.q.ListJourneys(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	return scanJourneys(rows)
+	return sqlcJourneysToJourneys(rows), nil
 }
 
 func (r *SQLiteRepository) ListByTrain(ctx context.Context, trainNumber int) ([]*journey.Journey, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, train_number, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_departure, actual_departure, delay, recorded_at
-		 FROM journey WHERE train_number = ? ORDER BY recorded_at DESC`, trainNumber)
+	rows, err := r.q.ListJourneysByTrain(ctx, int64(trainNumber))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	return scanJourneys(rows)
+	return sqlcJourneysToJourneys(rows), nil
 }
 
 func (r *SQLiteRepository) ListByDateRange(ctx context.Context, from, to time.Time) ([]*journey.Journey, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, train_number, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_departure, actual_departure, delay, recorded_at
-		 FROM journey WHERE recorded_at BETWEEN ? AND ? ORDER BY recorded_at DESC`, from, to)
+	rows, err := r.q.ListJourneysByDateRange(ctx, sqlc.ListJourneysByDateRangeParams{
+		FromRecordedAt: from,
+		ToRecordedAt:   to,
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	return scanJourneys(rows)
+	return sqlcJourneysToJourneys(rows), nil
 }
 
 func (r *SQLiteRepository) Update(ctx context.Context, entity *journey.Journey) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE journey SET train_number = ?, origin_id = ?, origin_name = ?, destination_id = ?,
-		 destination_name = ?, scheduled_departure = ?, actual_departure = ?, delay = ?
-		 WHERE id = ?`,
-		entity.TrainNumber, entity.OriginID, entity.OriginName, entity.DestinationID,
-		entity.DestinationName, entity.ScheduledDeparture, entity.ActualDeparture,
-		entity.Delay, entity.ID.String())
-	return err
+	return r.q.UpdateJourney(ctx, sqlc.UpdateJourneyParams{
+		ID:                 entity.ID.String(),
+		TrainNumber:        int64(entity.TrainNumber),
+		OriginID:           entity.OriginID,
+		OriginName:         entity.OriginName,
+		DestinationID:      entity.DestinationID,
+		DestinationName:    entity.DestinationName,
+		ScheduledDeparture: &entity.ScheduledDeparture,
+		ActualDeparture:    timePtr(entity.ActualDeparture),
+		Delay:              ptr(int64(entity.Delay)),
+	})
 }
 
 func (r *SQLiteRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM journey WHERE id = ?", id.String())
-	return err
+	return r.q.DeleteJourney(ctx, id.String())
 }
 
 func (r *SQLiteRepository) CreateStop(ctx context.Context, stop *journey.JourneyStop) error {
-	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO journey_stop (id, journey_id, station_id, station_name, scheduled_arrival,
-		 scheduled_departure, actual_arrival, actual_departure, arrival_delay, departure_delay, platform)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		stop.ID.String(), stop.JourneyID.String(), stop.StationID, stop.StationName,
-		stop.ScheduledArrival, stop.ScheduledDeparture, stop.ActualArrival, stop.ActualDeparture,
-		stop.ArrivalDelay, stop.DepartureDelay, stop.Platform)
-	return err
+	return r.q.CreateJourneyStop(ctx, sqlc.CreateJourneyStopParams{
+		ID:                 stop.ID.String(),
+		JourneyID:          stop.JourneyID.String(),
+		StationID:          stop.StationID,
+		StationName:        stop.StationName,
+		ScheduledArrival:   timePtr(stop.ScheduledArrival),
+		ScheduledDeparture: timePtr(stop.ScheduledDeparture),
+		ActualArrival:      timePtr(stop.ActualArrival),
+		ActualDeparture:    timePtr(stop.ActualDeparture),
+		ArrivalDelay:       ptr(int64(stop.ArrivalDelay)),
+		DepartureDelay:     ptr(int64(stop.DepartureDelay)),
+		Platform:           strPtr(stop.Platform),
+	})
 }
 
 func (r *SQLiteRepository) GetStopsByJourney(ctx context.Context, journeyID uuid.UUID) ([]*journey.JourneyStop, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, journey_id, station_id, station_name, scheduled_arrival, scheduled_departure,
-		 actual_arrival, actual_departure, arrival_delay, departure_delay, platform
-		 FROM journey_stop WHERE journey_id = ? ORDER BY scheduled_departure`, journeyID.String())
+	rows, err := r.q.GetJourneyStops(ctx, journeyID.String())
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var stops []*journey.JourneyStop
-	for rows.Next() {
-		var stop journey.JourneyStop
-		var idStr, journeyIDStr string
-		var schedArr, schedDep, actArr, actDep sql.NullTime
-		if err := rows.Scan(&idStr, &journeyIDStr, &stop.StationID, &stop.StationName,
-			&schedArr, &schedDep, &actArr, &actDep,
-			&stop.ArrivalDelay, &stop.DepartureDelay, &stop.Platform); err != nil {
-			return nil, err
-		}
-		stop.ID, _ = uuid.Parse(idStr)
-		stop.JourneyID, _ = uuid.Parse(journeyIDStr)
-		if schedArr.Valid {
-			stop.ScheduledArrival = schedArr.Time
-		}
-		if schedDep.Valid {
-			stop.ScheduledDeparture = schedDep.Time
-		}
-		if actArr.Valid {
-			stop.ActualArrival = actArr.Time
-		}
-		if actDep.Valid {
-			stop.ActualDeparture = actDep.Time
-		}
-		stops = append(stops, &stop)
-	}
-	return stops, rows.Err()
+	return sqlcStopsToStops(rows), nil
 }
 
-func scanJourney(row *sql.Row) (*journey.Journey, error) {
-	var entity journey.Journey
-	var idStr string
-	var actualDep sql.NullTime
-	if err := row.Scan(&idStr, &entity.TrainNumber, &entity.OriginID, &entity.OriginName,
-		&entity.DestinationID, &entity.DestinationName, &entity.ScheduledDeparture,
-		&actualDep, &entity.Delay, &entity.RecordedAt); err != nil {
-		return nil, err
-	}
-	entity.ID, _ = uuid.Parse(idStr)
-	if actualDep.Valid {
-		entity.ActualDeparture = actualDep.Time
-	}
-	return &entity, nil
+func ptr[T any](v T) *T {
+	return &v
 }
 
-func scanJourneys(rows *sql.Rows) ([]*journey.Journey, error) {
-	var entities []*journey.Journey
-	for rows.Next() {
-		var entity journey.Journey
-		var idStr string
-		var actualDep sql.NullTime
-		if err := rows.Scan(&idStr, &entity.TrainNumber, &entity.OriginID, &entity.OriginName,
-			&entity.DestinationID, &entity.DestinationName, &entity.ScheduledDeparture,
-			&actualDep, &entity.Delay, &entity.RecordedAt); err != nil {
-			return nil, err
-		}
-		entity.ID, _ = uuid.Parse(idStr)
-		if actualDep.Valid {
-			entity.ActualDeparture = actualDep.Time
-		}
-		entities = append(entities, &entity)
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
 	}
-	return entities, rows.Err()
+	return *p
+}
+
+func timePtr(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func sqlcJourneyToJourney(row sqlc.Journey) *journey.Journey {
+	id, _ := uuid.Parse(row.ID)
+	return &journey.Journey{
+		ID:                 id,
+		TrainNumber:        int(row.TrainNumber),
+		OriginID:           row.OriginID,
+		OriginName:         row.OriginName,
+		DestinationID:      row.DestinationID,
+		DestinationName:    row.DestinationName,
+		ScheduledDeparture: deref(row.ScheduledDeparture),
+		ActualDeparture:    deref(row.ActualDeparture),
+		Delay:              int(deref(row.Delay)),
+		RecordedAt:         row.RecordedAt,
+	}
+}
+
+func sqlcJourneysToJourneys(rows []sqlc.Journey) []*journey.Journey {
+	journeys := make([]*journey.Journey, len(rows))
+	for i, row := range rows {
+		journeys[i] = sqlcJourneyToJourney(row)
+	}
+	return journeys
+}
+
+func sqlcStopsToStops(rows []sqlc.JourneyStop) []*journey.JourneyStop {
+	stops := make([]*journey.JourneyStop, len(rows))
+	for i, row := range rows {
+		id, _ := uuid.Parse(row.ID)
+		journeyID, _ := uuid.Parse(row.JourneyID)
+		stops[i] = &journey.JourneyStop{
+			ID:                 id,
+			JourneyID:          journeyID,
+			StationID:          row.StationID,
+			StationName:        row.StationName,
+			ScheduledArrival:   deref(row.ScheduledArrival),
+			ScheduledDeparture: deref(row.ScheduledDeparture),
+			ActualArrival:      deref(row.ActualArrival),
+			ActualDeparture:    deref(row.ActualDeparture),
+			ArrivalDelay:       int(deref(row.ArrivalDelay)),
+			DepartureDelay:     int(deref(row.DepartureDelay)),
+			Platform:           deref(row.Platform),
+		}
+	}
+	return stops
 }

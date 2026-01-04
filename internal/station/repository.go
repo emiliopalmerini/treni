@@ -7,7 +7,6 @@ type StationRepository interface {
 	GetByID(ctx context.Context, id string) (*Station, error)
 	List(ctx context.Context) ([]*Station, error)
 	Search(ctx context.Context, query string) ([]*Station, error)
-	ListFavorites(ctx context.Context) ([]*Station, error)
 	ListWithCoordinates(ctx context.Context) ([]*Station, error)
 	Count(ctx context.Context) (int, error)
 	Update(ctx context.Context, entity *Station) error

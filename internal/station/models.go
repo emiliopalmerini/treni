@@ -1,10 +1,9 @@
 package station
 
 type Station struct {
-	ID         string  `json:"id"`
-	Name       string  `json:"name"`
-	Region     int     `json:"region,omitempty"`
-	Latitude   float64 `json:"latitude,omitempty"`
-	Longitude  float64 `json:"longitude,omitempty"`
-	IsFavorite bool    `json:"isFavorite"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Region    int     `json:"region,omitempty"`
+	Latitude  float64 `json:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty"`
 }

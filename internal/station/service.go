@@ -29,25 +29,12 @@ func (s *Service) List(ctx context.Context) ([]*Station, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *Service) ListFavorites(ctx context.Context) ([]*Station, error) {
-	return s.repo.ListFavorites(ctx)
-}
-
 func (s *Service) Update(ctx context.Context, entity *Station) error {
 	return s.repo.Update(ctx, entity)
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
-}
-
-func (s *Service) SetFavorite(ctx context.Context, id string, favorite bool) error {
-	station, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	station.IsFavorite = favorite
-	return s.repo.Update(ctx, station)
 }
 
 // SearchLive searches stations from the ViaggiaTreno API.
