@@ -3,7 +3,7 @@ package station
 import "github.com/go-chi/chi/v5"
 
 func RegisterRoutes(r chi.Router, h *Handler) {
-	r.Route("/stations", func(r chi.Router) {
+	r.Route("/api/v1/stations", func(r chi.Router) {
 		r.Get("/", h.List)
 		r.Get("/favorites", h.ListFavorites)
 		r.Get("/search", h.Search)

@@ -3,7 +3,7 @@ package watchlist
 import "github.com/go-chi/chi/v5"
 
 func RegisterRoutes(r chi.Router, h *Handler) {
-	r.Route("/watchlist", func(r chi.Router) {
+	r.Route("/api/v1/watchlist", func(r chi.Router) {
 		r.Get("/", h.List)
 		r.Get("/active", h.ListActive)
 		r.Get("/checks/recent", h.GetRecentChecks)
