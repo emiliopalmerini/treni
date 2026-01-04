@@ -159,6 +159,28 @@ func (c *CachedClient) AndamentoTreno(ctx context.Context, originID string, trai
 	return status, nil
 }
 
+func (c *CachedClient) ElencoStazioni(ctx context.Context, regionCode int) ([]RegionStation, error) {
+	key := fmt.Sprintf("elenco_stazioni:%d", regionCode)
+
+	if data, ok := c.cache.Get(ctx, key); ok {
+		var stations []RegionStation
+		if err := json.Unmarshal(data, &stations); err == nil {
+			return stations, nil
+		}
+	}
+
+	stations, err := c.client.ElencoStazioni(ctx, regionCode)
+	if err != nil {
+		return nil, err
+	}
+
+	if data, err := json.Marshal(stations); err == nil {
+		c.cache.Set(ctx, key, data, c.ttl.Static)
+	}
+
+	return stations, nil
+}
+
 // normalizeTime truncates time to minute resolution for cache key generation.
 func normalizeTime(t time.Time) string {
 	return t.Truncate(time.Minute).Format("200601021504")

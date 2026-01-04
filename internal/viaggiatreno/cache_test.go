@@ -48,6 +48,10 @@ func (m *mockClient) AndamentoTreno(_ context.Context, originID, trainNumber str
 	return &TrainStatus{TrainNumber: 9876, Origin: "Milano", Destination: "Roma"}, nil
 }
 
+func (m *mockClient) ElencoStazioni(_ context.Context, regionCode int) ([]RegionStation, error) {
+	return []RegionStation{{ID: "S01700", Name: "Milano Centrale", Latitude: 45.48, Longitude: 9.20}}, nil
+}
+
 func TestCachedClient_AutocompletaStazione(t *testing.T) {
 	mock := &mockClient{}
 	c := cache.NewMemory()

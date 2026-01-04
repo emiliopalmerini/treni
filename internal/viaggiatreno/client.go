@@ -26,6 +26,7 @@ type Client interface {
 	Partenze(ctx context.Context, stationID string, when time.Time) ([]Departure, error)
 	Arrivi(ctx context.Context, stationID string, when time.Time) ([]Arrival, error)
 	AndamentoTreno(ctx context.Context, originID string, trainNumber string, departureTS int64) (*TrainStatus, error)
+	ElencoStazioni(ctx context.Context, regionCode int) ([]RegionStation, error)
 }
 
 // HTTPClient is an HTTP client for the ViaggiaTreno API.
@@ -296,6 +297,41 @@ func (c *HTTPClient) AndamentoTreno(ctx context.Context, originID string, trainN
 	}
 
 	return &status, nil
+}
+
+// ElencoStazioni gets all stations for a region.
+func (c *HTTPClient) ElencoStazioni(ctx context.Context, regionCode int) ([]RegionStation, error) {
+	endpoint := fmt.Sprintf("%s/elencoStazioni/%d", c.baseURL, regionCode)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("executing request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent {
+		return []RegionStation{}, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var stations []RegionStation
+	if err := json.NewDecoder(resp.Body).Decode(&stations); err != nil {
+		return nil, fmt.Errorf("decoding response: %w", err)
+	}
+
+	for i := range stations {
+		stations[i].Name = stations[i].Localita.LongName
+	}
+
+	return stations, nil
 }
 
 // formatViaggiatrenoTime formats a time for the ViaggiaTreno API.

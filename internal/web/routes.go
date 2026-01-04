@@ -16,6 +16,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Route("/api", func(r chi.Router) {
 		// Stations
 		r.Get("/stations/search", h.SearchStations)
+		r.Get("/stations/nearest", h.GetNearestStation)
 		r.Get("/stations/favorites", h.GetFavoriteStations)
 		r.Post("/stations/favorites", h.AddFavoriteStation)
 		r.Delete("/stations/favorites/{id}", h.DeleteFavoriteStation)

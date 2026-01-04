@@ -96,6 +96,32 @@ func (r *SQLiteRepository) ListFavorites(ctx context.Context) ([]*station.Statio
 	return entities, rows.Err()
 }
 
+func (r *SQLiteRepository) ListWithCoordinates(ctx context.Context) ([]*station.Station, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, name, region, latitude, longitude, is_favorite
+		 FROM station WHERE latitude != 0 AND longitude != 0`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entities []*station.Station
+	for rows.Next() {
+		var entity station.Station
+		if err := rows.Scan(&entity.ID, &entity.Name, &entity.Region, &entity.Latitude, &entity.Longitude, &entity.IsFavorite); err != nil {
+			return nil, err
+		}
+		entities = append(entities, &entity)
+	}
+	return entities, rows.Err()
+}
+
+func (r *SQLiteRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM station").Scan(&count)
+	return count, err
+}
+
 func (r *SQLiteRepository) Update(ctx context.Context, entity *station.Station) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE station SET name = ?, region = ?, latitude = ?, longitude = ?, is_favorite = ?

@@ -2,6 +2,8 @@ package station
 
 import (
 	"context"
+	"log"
+	"math"
 
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 )
@@ -68,6 +70,78 @@ func (s *Service) SearchLive(ctx context.Context, query string) ([]*Station, err
 // Search searches stations from the local database.
 func (s *Service) Search(ctx context.Context, query string) ([]*Station, error) {
 	return s.repo.Search(ctx, query)
+}
+
+// Count returns the number of stations in the database.
+func (s *Service) Count(ctx context.Context) (int, error) {
+	return s.repo.Count(ctx)
+}
+
+// ImportAllStations fetches all stations from all regions and stores them locally.
+func (s *Service) ImportAllStations(ctx context.Context) error {
+	for region := 1; region <= 22; region++ {
+		stations, err := s.client.ElencoStazioni(ctx, region)
+		if err != nil {
+			log.Printf("failed to fetch stations for region %d: %v", region, err)
+			continue
+		}
+
+		for _, rs := range stations {
+			station := &Station{
+				ID:        rs.ID,
+				Name:      rs.Name,
+				Region:    rs.Region,
+				Latitude:  rs.Latitude,
+				Longitude: rs.Longitude,
+			}
+			if err := s.repo.Upsert(ctx, station); err != nil {
+				log.Printf("failed to upsert station %s: %v", rs.ID, err)
+			}
+		}
+		log.Printf("imported %d stations from region %d", len(stations), region)
+	}
+	return nil
+}
+
+// FindNearest finds the station closest to the given coordinates.
+func (s *Service) FindNearest(ctx context.Context, lat, lon float64) (*Station, error) {
+	stations, err := s.repo.ListWithCoordinates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(stations) == 0 {
+		return nil, nil
+	}
+
+	var nearest *Station
+	minDist := math.MaxFloat64
+
+	for _, st := range stations {
+		dist := haversine(lat, lon, st.Latitude, st.Longitude)
+		if dist < minDist {
+			minDist = dist
+			nearest = st
+		}
+	}
+
+	return nearest, nil
+}
+
+// haversine calculates the distance in km between two coordinates.
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadius = 6371.0
+
+	lat1Rad := lat1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	deltaLat := (lat2 - lat1) * math.Pi / 180
+	deltaLon := (lon2 - lon1) * math.Pi / 180
+
+	a := math.Sin(deltaLat/2)*math.Sin(deltaLat/2) +
+		math.Cos(lat1Rad)*math.Cos(lat2Rad)*math.Sin(deltaLon/2)*math.Sin(deltaLon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return earthRadius * c
 }
 
 // Import fetches a station from the API and saves it locally.

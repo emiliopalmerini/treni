@@ -113,3 +113,17 @@ func (d *Departure) IsCancelled() bool {
 func (d *Departure) IsPartiallyCancelled() bool {
 	return d.CirculationState == 2
 }
+
+// RegionStation represents a station from the elencoStazioni endpoint.
+type RegionStation struct {
+	ID        string  `json:"codiceStazione"`
+	Name      string  `json:"-"`
+	Latitude  float64 `json:"lat"`
+	Longitude float64 `json:"lon"`
+	Region    int     `json:"codReg"`
+	Localita  struct {
+		LongName  string `json:"nomeLungo"`
+		ShortName string `json:"nomeBreve"`
+		ID        string `json:"id"`
+	} `json:"localita"`
+}

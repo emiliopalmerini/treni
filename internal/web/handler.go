@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -39,12 +40,13 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeparturesPage(w http.ResponseWriter, r *http.Request) {
 	stationID := r.URL.Query().Get("station")
+	detectLocation := stationID == ""
 	if stationID == "" {
 		stationID = "S01700" // Default to Milano Centrale
 	}
 
 	stationName := h.getStationName(r, stationID)
-	views.DeparturesPage(stationName, stationID).Render(r.Context(), w)
+	views.DeparturesPage(stationName, stationID, detectLocation).Render(r.Context(), w)
 }
 
 func (h *Handler) ArrivalsPage(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +128,40 @@ func (h *Handler) DeleteFavoriteStation(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	views.EmptyRow().Render(r.Context(), w)
+}
+
+func (h *Handler) GetNearestStation(w http.ResponseWriter, r *http.Request) {
+	latStr := r.URL.Query().Get("lat")
+	lonStr := r.URL.Query().Get("lon")
+
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		http.Error(w, "invalid lat", http.StatusBadRequest)
+		return
+	}
+
+	lon, err := strconv.ParseFloat(lonStr, 64)
+	if err != nil {
+		http.Error(w, "invalid lon", http.StatusBadRequest)
+		return
+	}
+
+	station, err := h.stationService.FindNearest(r.Context(), lat, lon)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if station == nil {
+		http.Error(w, "no stations found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"id":   station.ID,
+		"name": station.Name,
+	})
 }
 
 func (h *Handler) GetDepartures(w http.ResponseWriter, r *http.Request) {

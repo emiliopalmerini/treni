@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -40,6 +42,23 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	stationService := station.NewService(stationRepo, vtClient)
 	stationHandler := station.NewHandler(stationService)
 	station.RegisterRoutes(r, stationHandler)
+
+	// Import stations in background if none exist
+	go func() {
+		count, err := stationService.Count(context.Background())
+		if err != nil {
+			log.Printf("failed to count stations: %v", err)
+			return
+		}
+		if count == 0 {
+			log.Println("no stations found, importing all stations...")
+			if err := stationService.ImportAllStations(context.Background()); err != nil {
+				log.Printf("failed to import stations: %v", err)
+			} else {
+				log.Println("station import completed")
+			}
+		}
+	}()
 
 	// Journey module
 	journeyRepo := journeyPersistence.NewSQLiteRepository(db)

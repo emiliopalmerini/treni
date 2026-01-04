@@ -15,7 +15,7 @@ type DepartureView struct {
 	IsCancelled  bool
 }
 
-templ DeparturesPage(stationName string, stationID string) {
+templ DeparturesPage(stationName string, stationID string, detectLocation bool) {
 	@Layout("Partenze · " + stationName) {
 		<section class="section">
 			<div class="section-header">
@@ -45,7 +45,31 @@ templ DeparturesPage(stationName string, stationID string) {
 				</div>
 			</div>
 		</section>
+		if detectLocation {
+			@geolocateScript()
+		}
 	}
+}
+
+templ geolocateScript() {
+	<script>
+		(function() {
+			if (!navigator.geolocation) return;
+			navigator.geolocation.getCurrentPosition(
+				function(pos) {
+					fetch('/api/stations/nearest?lat=' + pos.coords.latitude + '&lon=' + pos.coords.longitude)
+						.then(function(r) { return r.json(); })
+						.then(function(data) {
+							if (data.id) {
+								window.location.href = '/departures?station=' + data.id;
+							}
+						})
+						.catch(function() {});
+				},
+				function() {}
+			);
+		})();
+	</script>
 }
 
 templ DeparturesTable(departures []DepartureView) {
