@@ -67,9 +67,8 @@ templ DeparturesTable(departures []DepartureView) {
 				for _, d := range departures {
 					<tr
 						class="expandable-row"
-						hx-get={ fmt.Sprintf("/api/train/%d", d.TrainNumber) }
-						hx-target={ fmt.Sprintf("#detail-%d", d.TrainNumber) }
-						hx-swap="innerHTML"
+						x-data="{ open: false }"
+						@click={ fmt.Sprintf("if(open) { document.getElementById('detail-%d').innerHTML = ''; open = false; } else { htmx.ajax('GET', '/api/train/%d', '#detail-%d'); open = true; }", d.TrainNumber, d.TrainNumber, d.TrainNumber) }
 						style="cursor: pointer;"
 					>
 						<td class="font-bold">{ d.Time.Format("15:04") }</td>
@@ -91,7 +90,7 @@ templ DeparturesTable(departures []DepartureView) {
 							}
 						</td>
 						<td class="hide-mobile">
-							<span class="btn btn-sm btn-outline">Info</span>
+							<span class="btn btn-sm btn-outline" x-text="open ? 'Chiudi' : 'Info'"></span>
 						</td>
 					</tr>
 					<tr id={ fmt.Sprintf("detail-%d", d.TrainNumber) } class="detail-row"></tr>

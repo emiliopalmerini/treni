@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -96,21 +95,24 @@ func (h *Handler) GetFavoriteStations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) AddFavoriteStation(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := r.ParseForm(); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	station := &station.Station{
-		ID:         req.ID,
-		Name:       req.Name,
+	id := r.FormValue("id")
+	name := r.FormValue("name")
+	if id == "" || name == "" {
+		http.Error(w, "id and name required", http.StatusBadRequest)
+		return
+	}
+
+	s := &station.Station{
+		ID:         id,
+		Name:       name,
 		IsFavorite: true,
 	}
-	if err := h.stationService.Create(r.Context(), station); err != nil {
+	if err := h.stationService.Create(r.Context(), s); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
