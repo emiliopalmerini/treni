@@ -16,6 +16,7 @@ import (
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 	"github.com/emiliopalmerini/treni/internal/watchlist"
 	watchlistPersistence "github.com/emiliopalmerini/treni/internal/watchlist/persistence"
+	"github.com/emiliopalmerini/treni/internal/web"
 )
 
 func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
@@ -52,6 +53,10 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	watchlistService := watchlist.NewService(watchlistRepo, vtClient)
 	watchlistHandler := watchlist.NewHandler(watchlistService)
 	watchlist.RegisterRoutes(r, watchlistHandler)
+
+	// Web UI
+	webHandler := web.NewHandler(vtClient, stationService, watchlistService)
+	web.RegisterRoutes(r, webHandler)
 
 	return &http.Server{
 		Addr:    cfg.Addr,

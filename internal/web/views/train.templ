@@ -1,0 +1,140 @@
+package views
+
+import (
+	"fmt"
+	"time"
+)
+
+type TrainDetailView struct {
+	Number      int
+	Category    string
+	Origin      string
+	Destination string
+	Delay       int
+	Stops       []StopView
+}
+
+type StopView struct {
+	Name           string
+	ScheduledArr   string
+	ScheduledDep   string
+	ActualArr      string
+	ActualDep      string
+	DelayArr       int
+	DelayDep       int
+	Platform       string
+	IsPassed       bool
+}
+
+templ TrainSearchResults(trains []TrainMatchView) {
+	if len(trains) == 0 {
+		<p class="text-gray text-sm">Nessun treno trovato</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Treno</th>
+					<th>Origine</th>
+					<th>Azioni</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, t := range trains {
+					<tr>
+						<td>{ t.Number }</td>
+						<td>{ t.Origin }</td>
+						<td>
+							<button
+								class="btn-sm"
+								hx-get={ fmt.Sprintf("/api/train/%s?origin=%s&ts=%d", t.Number, t.OriginID, t.DepartureTS) }
+								hx-target="#train-detail-modal"
+								hx-swap="innerHTML"
+							>
+								Dettagli
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<div id="train-detail-modal" class="mt-4"></div>
+	}
+}
+
+type TrainMatchView struct {
+	Number      string
+	Origin      string
+	OriginID    string
+	DepartureTS int64
+}
+
+templ TrainDetail(train TrainDetailView) {
+	<div class="card" style="margin-top: 1rem; border: 2px solid #3182ce;">
+		<div class="flex justify-between items-center mb-4">
+			<div>
+				<h2>
+					if train.Category != "" {
+						<span class="text-gray">{ train.Category }</span>
+					}
+					Treno { fmt.Sprintf("%d", train.Number) }
+				</h2>
+				<p class="text-sm text-gray">{ train.Origin } → { train.Destination }</p>
+			</div>
+			<div>
+				if train.Delay > 0 {
+					<span class="badge badge-delay">+{ fmt.Sprintf("%d", train.Delay) } min</span>
+				} else {
+					<span class="badge badge-ok">In orario</span>
+				}
+			</div>
+		</div>
+		<table>
+			<thead>
+				<tr>
+					<th>Stazione</th>
+					<th>Arrivo</th>
+					<th>Partenza</th>
+					<th>Binario</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, s := range train.Stops {
+					<tr style={ stopRowStyle(s.IsPassed) }>
+						<td>{ s.Name }</td>
+						<td>
+							if s.ScheduledArr != "" {
+								{ s.ScheduledArr }
+								if s.DelayArr > 0 {
+									<span class="delay text-sm"> (+{ fmt.Sprintf("%d", s.DelayArr) })</span>
+								}
+							}
+						</td>
+						<td>
+							if s.ScheduledDep != "" {
+								{ s.ScheduledDep }
+								if s.DelayDep > 0 {
+									<span class="delay text-sm"> (+{ fmt.Sprintf("%d", s.DelayDep) })</span>
+								}
+							}
+						</td>
+						<td>{ s.Platform }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+func stopRowStyle(isPassed bool) string {
+	if isPassed {
+		return "opacity: 0.5;"
+	}
+	return ""
+}
+
+func formatTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("15:04")
+}

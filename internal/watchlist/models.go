@@ -6,6 +6,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type UUID = uuid.UUID
+
+func ParseUUID(s string) (UUID, error) {
+	return uuid.Parse(s)
+}
+
 type WatchedTrain struct {
 	ID          uuid.UUID `json:"id"`
 	TrainNumber int       `json:"trainNumber"`

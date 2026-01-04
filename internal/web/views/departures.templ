@@ -1,0 +1,172 @@
+package views
+
+import (
+	"fmt"
+	"time"
+)
+
+type DepartureView struct {
+	TrainNumber  int
+	Category     string
+	Destination  string
+	Time         time.Time
+	Delay        int
+	Platform     string
+	IsCancelled  bool
+}
+
+templ DeparturesPage(stationName string, stationID string) {
+	@Layout("Partenze - " + stationName) {
+		<div class="card">
+			<div class="flex justify-between items-center mb-4">
+				<h2>Partenze da { stationName }</h2>
+				<button
+					hx-get={ "/api/departures/" + stationID }
+					hx-target="#departures-table"
+					hx-indicator="#loading"
+				>
+					<span id="loading" class="htmx-indicator">⏳</span>
+					Aggiorna
+				</button>
+			</div>
+			<div
+				id="departures-table"
+				hx-get={ "/api/departures/" + stationID }
+				hx-trigger="load"
+				hx-swap="innerHTML"
+			>
+				<div class="loading">Caricamento partenze...</div>
+			</div>
+		</div>
+	}
+}
+
+templ DeparturesTable(departures []DepartureView) {
+	if len(departures) == 0 {
+		<p class="text-gray">Nessuna partenza trovata</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Orario</th>
+					<th>Treno</th>
+					<th>Destinazione</th>
+					<th>Ritardo</th>
+					<th>Binario</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, d := range departures {
+					<tr>
+						<td>{ d.Time.Format("15:04") }</td>
+						<td>
+							if d.Category != "" {
+								<span class="text-gray text-sm">{ d.Category }</span>
+							}
+							{ fmt.Sprintf("%d", d.TrainNumber) }
+						</td>
+						<td>{ d.Destination }</td>
+						<td>
+							if d.IsCancelled {
+								<span class="badge badge-delay">Cancellato</span>
+							} else if d.Delay > 0 {
+								<span class="delay">+{ fmt.Sprintf("%d", d.Delay) } min</span>
+							} else {
+								<span class="on-time">In orario</span>
+							}
+						</td>
+						<td>{ d.Platform }</td>
+						<td>
+							<button
+								class="btn-sm secondary"
+								hx-get={ fmt.Sprintf("/api/train/%d", d.TrainNumber) }
+								hx-target="#train-modal"
+								hx-swap="innerHTML"
+							>
+								Dettagli
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<div id="train-modal"></div>
+	}
+}
+
+templ ArrivalsPage(stationName string, stationID string) {
+	@Layout("Arrivi - " + stationName) {
+		<div class="card">
+			<div class="flex justify-between items-center mb-4">
+				<h2>Arrivi a { stationName }</h2>
+				<button
+					hx-get={ "/api/arrivals/" + stationID }
+					hx-target="#arrivals-table"
+				>
+					Aggiorna
+				</button>
+			</div>
+			<div
+				id="arrivals-table"
+				hx-get={ "/api/arrivals/" + stationID }
+				hx-trigger="load"
+				hx-swap="innerHTML"
+			>
+				<div class="loading">Caricamento arrivi...</div>
+			</div>
+		</div>
+	}
+}
+
+type ArrivalView struct {
+	TrainNumber int
+	Category    string
+	Origin      string
+	Time        time.Time
+	Delay       int
+	Platform    string
+	IsCancelled bool
+}
+
+templ ArrivalsTable(arrivals []ArrivalView) {
+	if len(arrivals) == 0 {
+		<p class="text-gray">Nessun arrivo trovato</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Orario</th>
+					<th>Treno</th>
+					<th>Provenienza</th>
+					<th>Ritardo</th>
+					<th>Binario</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, a := range arrivals {
+					<tr>
+						<td>{ a.Time.Format("15:04") }</td>
+						<td>
+							if a.Category != "" {
+								<span class="text-gray text-sm">{ a.Category }</span>
+							}
+							{ fmt.Sprintf("%d", a.TrainNumber) }
+						</td>
+						<td>{ a.Origin }</td>
+						<td>
+							if a.IsCancelled {
+								<span class="badge badge-delay">Cancellato</span>
+							} else if a.Delay > 0 {
+								<span class="delay">+{ fmt.Sprintf("%d", a.Delay) } min</span>
+							} else {
+								<span class="on-time">In orario</span>
+							}
+						</td>
+						<td>{ a.Platform }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
