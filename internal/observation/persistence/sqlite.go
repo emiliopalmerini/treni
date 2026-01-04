@@ -3,31 +3,25 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/observation"
 )
 
 type SQLiteRepository struct {
 	db *sql.DB
+	q  *sqlc.Queries
 }
 
 func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
-	return &SQLiteRepository{db: db}
+	return &SQLiteRepository{db: db, q: sqlc.New(db)}
 }
 
 func (r *SQLiteRepository) Create(ctx context.Context, entity *observation.TrainObservation) error {
-	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO train_observation (id, observed_at, station_id, station_name, observation_type,
-		 train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_time, delay, platform, circulation_state)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		entity.ID.String(), entity.ObservedAt, entity.StationID, entity.StationName, entity.ObservationType,
-		entity.TrainNumber, entity.TrainCategory, entity.OriginID, entity.OriginName,
-		entity.DestinationID, entity.DestinationName, entity.ScheduledTime, entity.Delay,
-		entity.Platform, entity.CirculationState)
-	return err
+	return r.q.CreateObservation(ctx, observationToParams(entity))
 }
 
 func (r *SQLiteRepository) CreateBatch(ctx context.Context, entities []*observation.TrainObservation) error {
@@ -37,23 +31,9 @@ func (r *SQLiteRepository) CreateBatch(ctx context.Context, entities []*observat
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx,
-		`INSERT INTO train_observation (id, observed_at, station_id, station_name, observation_type,
-		 train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_time, delay, platform, circulation_state)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
+	q := r.q.WithTx(tx)
 	for _, entity := range entities {
-		_, err := stmt.ExecContext(ctx,
-			entity.ID.String(), entity.ObservedAt, entity.StationID, entity.StationName, entity.ObservationType,
-			entity.TrainNumber, entity.TrainCategory, entity.OriginID, entity.OriginName,
-			entity.DestinationID, entity.DestinationName, entity.ScheduledTime, entity.Delay,
-			entity.Platform, entity.CirculationState)
-		if err != nil {
+		if err := q.CreateObservation(ctx, observationToParams(entity)); err != nil {
 			return err
 		}
 	}
@@ -62,231 +42,235 @@ func (r *SQLiteRepository) CreateBatch(ctx context.Context, entities []*observat
 }
 
 func (r *SQLiteRepository) GetGlobalStats(ctx context.Context) (*observation.GlobalStats, error) {
-	row := r.db.QueryRowContext(ctx,
-		`SELECT
-			COUNT(*) as total,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) as on_time,
-			SUM(CASE WHEN circulation_state = 1 THEN 1 ELSE 0 END) as cancelled
-		FROM train_observation`)
-
-	var stats observation.GlobalStats
-	if err := row.Scan(&stats.TotalObservations, &stats.AverageDelay, &stats.OnTimeCount, &stats.CancelledCount); err != nil {
+	row, err := r.q.GetGlobalStats(ctx)
+	if err != nil {
 		return nil, err
+	}
+
+	stats := &observation.GlobalStats{
+		TotalObservations: int(row.TotalObservations),
+		AverageDelay:      toFloat64(row.AverageDelay),
+		OnTimeCount:       int(deref(row.OnTimeCount)),
+		CancelledCount:    int(deref(row.CancelledCount)),
 	}
 
 	if stats.TotalObservations > 0 {
 		stats.OnTimePercentage = float64(stats.OnTimeCount) / float64(stats.TotalObservations) * 100
 	}
 
-	return &stats, nil
+	return stats, nil
 }
 
 func (r *SQLiteRepository) GetStatsByCategory(ctx context.Context) ([]*observation.CategoryStats, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT
-			train_category,
-			COUNT(*) as count,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_pct
-		FROM train_observation
-		WHERE train_category != ''
-		GROUP BY train_category
-		ORDER BY count DESC`)
+	rows, err := r.q.GetStatsByCategory(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var stats []*observation.CategoryStats
-	for rows.Next() {
-		var s observation.CategoryStats
-		if err := rows.Scan(&s.Category, &s.ObservationCount, &s.AverageDelay, &s.OnTimePercentage); err != nil {
-			return nil, err
+	stats := make([]*observation.CategoryStats, len(rows))
+	for i, row := range rows {
+		stats[i] = &observation.CategoryStats{
+			Category:         deref(row.Category),
+			ObservationCount: int(row.ObservationCount),
+			AverageDelay:     toFloat64(row.AverageDelay),
+			OnTimePercentage: float64(row.OnTimePercentage),
 		}
-		stats = append(stats, &s)
 	}
-	return stats, rows.Err()
+	return stats, nil
 }
 
 func (r *SQLiteRepository) GetStatsByStation(ctx context.Context, stationID string) (*observation.StationStats, error) {
-	row := r.db.QueryRowContext(ctx,
-		`SELECT
-			station_id,
-			station_name,
-			COUNT(*) as count,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_pct
-		FROM train_observation
-		WHERE station_id = ?
-		GROUP BY station_id`, stationID)
-
-	var s observation.StationStats
-	if err := row.Scan(&s.StationID, &s.StationName, &s.ObservationCount, &s.AverageDelay, &s.OnTimePercentage); err != nil {
+	row, err := r.q.GetStatsByStation(ctx, stationID)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return &s, nil
+
+	return &observation.StationStats{
+		StationID:        row.StationID,
+		StationName:      row.StationName,
+		ObservationCount: int(row.ObservationCount),
+		AverageDelay:     toFloat64(row.AverageDelay),
+		OnTimePercentage: float64(row.OnTimePercentage),
+	}, nil
 }
 
 func (r *SQLiteRepository) GetStatsByTrain(ctx context.Context, trainNumber int) (*observation.TrainStats, error) {
-	row := r.db.QueryRowContext(ctx,
-		`SELECT
-			train_number,
-			train_category,
-			origin_name,
-			destination_name,
-			COUNT(*) as count,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			COALESCE(MAX(delay), 0) as max_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_pct
-		FROM train_observation
-		WHERE train_number = ?
-		GROUP BY train_number`, trainNumber)
-
-	var s observation.TrainStats
-	var category, origin, destination sql.NullString
-	if err := row.Scan(&s.TrainNumber, &category, &origin, &destination,
-		&s.ObservationCount, &s.AverageDelay, &s.MaxDelay, &s.OnTimePercentage); err != nil {
+	row, err := r.q.GetStatsByTrain(ctx, int64(trainNumber))
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	s.Category = category.String
-	s.OriginName = origin.String
-	s.DestinationName = destination.String
-	return &s, nil
+
+	return &observation.TrainStats{
+		TrainNumber:      int(row.TrainNumber),
+		Category:         deref(row.Category),
+		OriginName:       deref(row.OriginName),
+		DestinationName:  deref(row.DestinationName),
+		ObservationCount: int(row.ObservationCount),
+		AverageDelay:     toFloat64(row.AverageDelay),
+		MaxDelay:         toInt(row.MaxDelay),
+		OnTimePercentage: float64(row.OnTimePercentage),
+	}, nil
 }
 
 func (r *SQLiteRepository) GetWorstTrains(ctx context.Context, limit int) ([]*observation.TrainStats, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT
-			train_number,
-			train_category,
-			origin_name,
-			destination_name,
-			COUNT(*) as count,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			COALESCE(MAX(delay), 0) as max_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_pct
-		FROM train_observation
-		WHERE circulation_state != 1
-		GROUP BY train_number
-		HAVING count >= 3
-		ORDER BY avg_delay DESC
-		LIMIT ?`, limit)
+	rows, err := r.q.GetWorstTrains(ctx, int64(limit))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var stats []*observation.TrainStats
-	for rows.Next() {
-		var s observation.TrainStats
-		var category, origin, destination sql.NullString
-		if err := rows.Scan(&s.TrainNumber, &category, &origin, &destination,
-			&s.ObservationCount, &s.AverageDelay, &s.MaxDelay, &s.OnTimePercentage); err != nil {
-			return nil, err
+	stats := make([]*observation.TrainStats, len(rows))
+	for i, row := range rows {
+		stats[i] = &observation.TrainStats{
+			TrainNumber:      int(row.TrainNumber),
+			Category:         deref(row.Category),
+			OriginName:       deref(row.OriginName),
+			DestinationName:  deref(row.DestinationName),
+			ObservationCount: int(row.ObservationCount),
+			AverageDelay:     toFloat64(row.AverageDelay),
+			MaxDelay:         toInt(row.MaxDelay),
+			OnTimePercentage: float64(row.OnTimePercentage),
 		}
-		s.Category = category.String
-		s.OriginName = origin.String
-		s.DestinationName = destination.String
-		stats = append(stats, &s)
 	}
-	return stats, rows.Err()
+	return stats, nil
 }
 
 func (r *SQLiteRepository) GetWorstStations(ctx context.Context, limit int) ([]*observation.StationStats, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT
-			station_id,
-			station_name,
-			COUNT(*) as count,
-			COALESCE(AVG(delay), 0) as avg_delay,
-			SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_pct
-		FROM train_observation
-		WHERE circulation_state != 1
-		GROUP BY station_id
-		HAVING count >= 3
-		ORDER BY avg_delay DESC
-		LIMIT ?`, limit)
+	rows, err := r.q.GetWorstStations(ctx, int64(limit))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var stats []*observation.StationStats
-	for rows.Next() {
-		var s observation.StationStats
-		if err := rows.Scan(&s.StationID, &s.StationName, &s.ObservationCount, &s.AverageDelay, &s.OnTimePercentage); err != nil {
-			return nil, err
+	stats := make([]*observation.StationStats, len(rows))
+	for i, row := range rows {
+		stats[i] = &observation.StationStats{
+			StationID:        row.StationID,
+			StationName:      row.StationName,
+			ObservationCount: int(row.ObservationCount),
+			AverageDelay:     toFloat64(row.AverageDelay),
+			OnTimePercentage: float64(row.OnTimePercentage),
 		}
-		stats = append(stats, &s)
 	}
-	return stats, rows.Err()
+	return stats, nil
 }
 
 func (r *SQLiteRepository) GetRecentObservations(ctx context.Context, limit int) ([]*observation.TrainObservation, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, observed_at, station_id, station_name, observation_type,
-		 train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_time, delay, platform, circulation_state
-		 FROM train_observation
-		 ORDER BY observed_at DESC
-		 LIMIT ?`, limit)
+	rows, err := r.q.GetRecentObservations(ctx, int64(limit))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	return scanObservations(rows)
+	return sqlcObservationsToObservations(rows), nil
 }
 
 func (r *SQLiteRepository) GetRecentByStation(ctx context.Context, stationID string, limit int) ([]*observation.TrainObservation, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, observed_at, station_id, station_name, observation_type,
-		 train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-		 scheduled_time, delay, platform, circulation_state
-		 FROM train_observation
-		 WHERE station_id = ?
-		 ORDER BY observed_at DESC
-		 LIMIT ?`, stationID, limit)
+	rows, err := r.q.GetRecentObservationsByStation(ctx, sqlc.GetRecentObservationsByStationParams{
+		StationID: stationID,
+		Limit:     int64(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	return scanObservations(rows)
+	return sqlcObservationsToObservations(rows), nil
 }
 
-func scanObservations(rows *sql.Rows) ([]*observation.TrainObservation, error) {
-	var entities []*observation.TrainObservation
-	for rows.Next() {
-		var entity observation.TrainObservation
-		var idStr string
-		var obsType string
-		var category, originID, originName, destID, destName, platform sql.NullString
-		var scheduledTime sql.NullTime
-		if err := rows.Scan(&idStr, &entity.ObservedAt, &entity.StationID, &entity.StationName, &obsType,
-			&entity.TrainNumber, &category, &originID, &originName, &destID, &destName,
-			&scheduledTime, &entity.Delay, &platform, &entity.CirculationState); err != nil {
-			return nil, err
-		}
-		entity.ID, _ = uuid.Parse(idStr)
-		entity.ObservationType = observation.ObservationType(obsType)
-		entity.TrainCategory = category.String
-		entity.OriginID = originID.String
-		entity.OriginName = originName.String
-		entity.DestinationID = destID.String
-		entity.DestinationName = destName.String
-		entity.Platform = platform.String
-		if scheduledTime.Valid {
-			entity.ScheduledTime = scheduledTime.Time
-		}
-		entities = append(entities, &entity)
+func ptr[T any](v T) *T {
+	return &v
+}
+
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
 	}
-	return entities, rows.Err()
+	return *p
+}
+
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func timePtr(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
+func toFloat64(v interface{}) float64 {
+	switch val := v.(type) {
+	case float64:
+		return val
+	case int64:
+		return float64(val)
+	case int:
+		return float64(val)
+	default:
+		return 0
+	}
+}
+
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case float64:
+		return int(val)
+	case int64:
+		return int(val)
+	case int:
+		return val
+	default:
+		return 0
+	}
+}
+
+func observationToParams(entity *observation.TrainObservation) sqlc.CreateObservationParams {
+	return sqlc.CreateObservationParams{
+		ID:               entity.ID.String(),
+		ObservedAt:       entity.ObservedAt,
+		StationID:        entity.StationID,
+		StationName:      entity.StationName,
+		ObservationType:  string(entity.ObservationType),
+		TrainNumber:      int64(entity.TrainNumber),
+		TrainCategory:    strPtr(entity.TrainCategory),
+		OriginID:         strPtr(entity.OriginID),
+		OriginName:       strPtr(entity.OriginName),
+		DestinationID:    strPtr(entity.DestinationID),
+		DestinationName:  strPtr(entity.DestinationName),
+		ScheduledTime:    timePtr(entity.ScheduledTime),
+		Delay:            ptr(int64(entity.Delay)),
+		Platform:         strPtr(entity.Platform),
+		CirculationState: ptr(int64(entity.CirculationState)),
+	}
+}
+
+func sqlcObservationsToObservations(rows []sqlc.TrainObservation) []*observation.TrainObservation {
+	observations := make([]*observation.TrainObservation, len(rows))
+	for i, row := range rows {
+		id, _ := uuid.Parse(row.ID)
+		observations[i] = &observation.TrainObservation{
+			ID:               id,
+			ObservedAt:       row.ObservedAt,
+			StationID:        row.StationID,
+			StationName:      row.StationName,
+			ObservationType:  observation.ObservationType(row.ObservationType),
+			TrainNumber:      int(row.TrainNumber),
+			TrainCategory:    deref(row.TrainCategory),
+			OriginID:         deref(row.OriginID),
+			OriginName:       deref(row.OriginName),
+			DestinationID:    deref(row.DestinationID),
+			DestinationName:  deref(row.DestinationName),
+			ScheduledTime:    deref(row.ScheduledTime),
+			Delay:            int(deref(row.Delay)),
+			Platform:         deref(row.Platform),
+			CirculationState: int(deref(row.CirculationState)),
+		}
+	}
+	return observations
 }

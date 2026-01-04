@@ -7,7 +7,8 @@
       "Bash(templ generate:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(sqlc generate:*)"
     ]
   }
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/emiliopalmerini/treni/internal/observation"
+	"github.com/emiliopalmerini/treni/internal/preferita"
 	"github.com/emiliopalmerini/treni/internal/station"
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 	"github.com/emiliopalmerini/treni/internal/watchlist"
@@ -21,6 +22,7 @@ type Handler struct {
 	stationService     *station.Service
 	watchlistService   *watchlist.Service
 	observationService *observation.Service
+	preferitaService   *preferita.Service
 }
 
 func NewHandler(
@@ -28,12 +30,14 @@ func NewHandler(
 	stationService *station.Service,
 	watchlistService *watchlist.Service,
 	observationService *observation.Service,
+	preferitaService *preferita.Service,
 ) *Handler {
 	return &Handler{
 		vtClient:           vtClient,
 		stationService:     stationService,
 		watchlistService:   watchlistService,
 		observationService: observationService,
+		preferitaService:   preferitaService,
 	}
 }
 
@@ -117,15 +121,15 @@ func (h *Handler) SearchStations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetFavoriteStations(w http.ResponseWriter, r *http.Request) {
-	stations, err := h.stationService.List(r.Context())
+	preferite, err := h.preferitaService.List(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	stationViews := make([]views.StationView, len(stations))
-	for i, s := range stations {
-		stationViews[i] = views.StationView{ID: s.ID, Name: s.Name}
+	stationViews := make([]views.StationView, len(preferite))
+	for i, p := range preferite {
+		stationViews[i] = views.StationView{ID: p.StationID, Name: p.Name}
 	}
 
 	views.FavoriteStations(stationViews).Render(r.Context(), w)
@@ -144,12 +148,7 @@ func (h *Handler) AddFavoriteStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := &station.Station{
-		ID:         id,
-		Name:       name,
-		IsFavorite: true,
-	}
-	if err := h.stationService.Create(r.Context(), s); err != nil {
+	if err := h.preferitaService.Add(r.Context(), id, name); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -158,7 +157,7 @@ func (h *Handler) AddFavoriteStation(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteFavoriteStation(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if err := h.stationService.Delete(r.Context(), id); err != nil {
+	if err := h.preferitaService.Remove(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
