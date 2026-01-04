@@ -151,7 +151,7 @@ templ WatchlistStatusBadge(check *TrainCheckView) {
 	if check == nil {
 		<span class="text-muted uppercase text-xs">—</span>
 	} else if check.Status == "delayed" {
-		<span class="badge badge-warning">+{ fmt.Sprintf("%d", check.Delay) }'</span>
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", check.Delay) } min</span>
 	} else if check.Status == "on_time" {
 		<span class="badge badge-ok">Orario</span>
 	} else if check.Status == "cancelled" {
