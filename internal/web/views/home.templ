@@ -65,7 +65,7 @@ templ Home() {
 			</section>
 		</div>
 		<section class="section">
-			<h2>Stazioni Salvate</h2>
+			<h2>Stazioni Preferite</h2>
 			<div
 				id="favorites-list"
 				hx-get="/api/stations/favorites"
@@ -117,7 +117,7 @@ templ StationSearchResults(stations []viaggiatreno.Station) {
 
 templ FavoriteStations(stations []StationView) {
 	if len(stations) == 0 {
-		<p class="empty">Nessuna stazione salvata</p>
+		<p class="empty">Nessuna stazione preferita</p>
 	} else {
 		<table>
 			<thead>

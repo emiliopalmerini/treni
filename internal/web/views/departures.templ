@@ -225,7 +225,7 @@ templ DelayBadge(delay int, isCancelled bool) {
 	if isCancelled {
 		<span class="badge badge-error">Cancellato</span>
 	} else if delay > 0 {
-		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) }'</span>
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) } min</span>
 	} else {
 		<span class="badge badge-ok">Orario</span>
 	}

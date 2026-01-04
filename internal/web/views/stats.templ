@@ -68,7 +68,7 @@ templ StatsPage(stats StatsPageView) {
 					<div class="stat-label">Osservazioni</div>
 				</div>
 				<div class="stat-card">
-					<div class="stat-value">{ fmt.Sprintf("%.1f", stats.Global.AverageDelay) }'</div>
+					<div class="stat-value">{ fmt.Sprintf("%.1f", stats.Global.AverageDelay) } min</div>
 					<div class="stat-label">Ritardo Medio</div>
 				</div>
 				<div class="stat-card">
@@ -100,9 +100,9 @@ templ StatsPage(stats StatsPageView) {
 								<td>{ fmt.Sprintf("%d", c.ObservationCount) }</td>
 								<td>
 									if c.AverageDelay > 5 {
-										<span class="text-warning">{ fmt.Sprintf("%.1f", c.AverageDelay) }'</span>
+										<span class="text-warning">{ fmt.Sprintf("%.1f", c.AverageDelay) } min</span>
 									} else {
-										{ fmt.Sprintf("%.1f", c.AverageDelay) }'
+										{ fmt.Sprintf("%.1f", c.AverageDelay) } min
 									}
 								</td>
 								<td>
@@ -150,8 +150,8 @@ templ StatsPage(stats StatsPageView) {
 									</div>
 								</td>
 								<td>{ fmt.Sprintf("%d", t.ObservationCount) }</td>
-								<td class="text-warning font-bold">{ fmt.Sprintf("%.1f", t.AverageDelay) }'</td>
-								<td class="text-error">{ fmt.Sprintf("%d", t.MaxDelay) }'</td>
+								<td class="text-warning font-bold">{ fmt.Sprintf("%.1f", t.AverageDelay) } min</td>
+								<td class="text-error">{ fmt.Sprintf("%d", t.MaxDelay) } min</td>
 							</tr>
 						}
 					</tbody>
@@ -175,7 +175,7 @@ templ StatsPage(stats StatsPageView) {
 							<tr>
 								<td class="font-bold">{ s.StationName }</td>
 								<td>{ fmt.Sprintf("%d", s.ObservationCount) }</td>
-								<td class="text-warning">{ fmt.Sprintf("%.1f", s.AverageDelay) }'</td>
+								<td class="text-warning">{ fmt.Sprintf("%.1f", s.AverageDelay) } min</td>
 								<td>{ fmt.Sprintf("%.1f", s.OnTimePercentage) }%</td>
 							</tr>
 						}
@@ -230,7 +230,7 @@ templ StationStatsSection(stats StationStatsView) {
 				<strong>{ fmt.Sprintf("%d", stats.ObservationCount) }</strong> osservazioni
 			</span>
 			<span class="stat-mini">
-				<strong>{ fmt.Sprintf("%.1f", stats.AverageDelay) }'</strong> ritardo medio
+				<strong>{ fmt.Sprintf("%.1f", stats.AverageDelay) } min</strong> ritardo medio
 			</span>
 			<span class="stat-mini">
 				<strong>{ fmt.Sprintf("%.1f", stats.OnTimePercentage) }%</strong> in orario

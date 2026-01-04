@@ -114,6 +114,30 @@ func (d *Departure) IsPartiallyCancelled() bool {
 	return d.CirculationState == 2
 }
 
+// EffectivePlatform returns the actual platform if available, otherwise the scheduled one.
+func (d *Departure) EffectivePlatform() string {
+	if d.ActualPlatform != "" {
+		return d.ActualPlatform
+	}
+	return d.Platform
+}
+
+// EffectivePlatform returns the actual platform if available, otherwise the scheduled one.
+func (a *Arrival) EffectivePlatform() string {
+	if a.ActualPlatform != "" {
+		return a.ActualPlatform
+	}
+	return a.Platform
+}
+
+// EffectivePlatform returns the actual platform if available, otherwise the scheduled one.
+func (s *Stop) EffectivePlatform() string {
+	if s.ActualPlatform != "" {
+		return s.ActualPlatform
+	}
+	return s.Platform
+}
+
 // RegionStation represents a station from the elencoStazioni endpoint.
 type RegionStation struct {
 	ID        string  `json:"codiceStazione"`

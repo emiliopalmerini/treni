@@ -219,7 +219,7 @@ func (h *Handler) GetDepartures(w http.ResponseWriter, r *http.Request) {
 			Destination: d.Destination,
 			Time:        time.UnixMilli(d.DepartureTime),
 			Delay:       d.Delay,
-			Platform:    d.Platform,
+			Platform:    d.EffectivePlatform(),
 			IsCancelled: d.CirculationState == 1,
 		}
 	}
@@ -247,7 +247,7 @@ func (h *Handler) GetArrivals(w http.ResponseWriter, r *http.Request) {
 			Origin:      a.Origin,
 			Time:        time.UnixMilli(a.ArrivalTime),
 			Delay:       a.Delay,
-			Platform:    a.Platform,
+			Platform:    a.EffectivePlatform(),
 			IsCancelled: a.CirculationState == 1,
 		}
 	}
@@ -314,7 +314,7 @@ func (h *Handler) GetTrainDetail(w http.ResponseWriter, r *http.Request) {
 			Name:     s.StationName,
 			DelayArr: s.ArrivalDelay,
 			DelayDep: s.DepartureDelay,
-			Platform: s.Platform,
+			Platform: s.EffectivePlatform(),
 		}
 		if s.ScheduledArrival > 0 {
 			t := time.UnixMilli(s.ScheduledArrival)

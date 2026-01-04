@@ -98,13 +98,13 @@ templ TrainDetail(train TrainDetailView) {
 							if s.ScheduledArr != "" {
 								<span>{ s.ScheduledArr }</span>
 								if s.DelayArr > 0 {
-									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayArr) }</span>
+									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayArr) } min</span>
 								}
 							}
 							if s.ScheduledDep != "" {
 								<span>{ s.ScheduledDep }</span>
 								if s.DelayDep > 0 {
-									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayDep) }</span>
+									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayDep) } min</span>
 								}
 							}
 						</span>
@@ -122,7 +122,7 @@ templ TrainDetail(train TrainDetailView) {
 
 templ TrainStatusBadge(delay int) {
 	if delay > 0 {
-		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) }'</span>
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) } min</span>
 	} else {
 		<span class="badge badge-ok">Orario</span>
 	}
