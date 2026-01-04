@@ -376,6 +376,18 @@ func (h *Handler) DeleteFromWatchlist(w http.ResponseWriter, r *http.Request) {
 	views.EmptyRow().Render(r.Context(), w)
 }
 
+// Static assets
+
+func Favicon(w http.ResponseWriter, r *http.Request) {
+	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<rect width="32" height="32" fill="black"/>
+<text x="16" y="24" font-family="Arial,sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">t</text>
+</svg>`
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write([]byte(svg))
+}
+
 // Helpers
 
 func (h *Handler) getStationName(r *http.Request, stationID string) string {

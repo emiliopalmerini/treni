@@ -3,6 +3,9 @@ package web
 import "github.com/go-chi/chi/v5"
 
 func RegisterRoutes(r chi.Router, h *Handler) {
+	// Static assets
+	r.Get("/favicon.ico", Favicon)
+
 	// HTML pages
 	r.Get("/", h.Home)
 	r.Get("/departures", h.DeparturesPage)
