@@ -77,12 +77,37 @@ func (s *Service) Count(ctx context.Context) (int, error) {
 	return s.repo.Count(ctx)
 }
 
+// ImportStats tracks import progress.
+type ImportStats struct {
+	TotalRegions     int
+	CompletedRegions int
+	TotalStations    int
+	FailedStations   int
+	InProgress       bool
+}
+
 // ImportAllStations fetches all stations from all regions and stores them locally.
-func (s *Service) ImportAllStations(ctx context.Context) error {
-	for region := 1; region <= 22; region++ {
+func (s *Service) ImportAllStations(ctx context.Context, progress chan<- ImportStats) error {
+	const totalRegions = 22
+	stats := ImportStats{TotalRegions: totalRegions, InProgress: true}
+
+	sendProgress := func() {
+		if progress != nil {
+			select {
+			case progress <- stats:
+			default:
+			}
+		}
+	}
+
+	sendProgress()
+
+	for region := 1; region <= totalRegions; region++ {
 		stations, err := s.client.ElencoStazioni(ctx, region)
 		if err != nil {
 			log.Printf("failed to fetch stations for region %d: %v", region, err)
+			stats.CompletedRegions++
+			sendProgress()
 			continue
 		}
 
@@ -96,10 +121,19 @@ func (s *Service) ImportAllStations(ctx context.Context) error {
 			}
 			if err := s.repo.Upsert(ctx, station); err != nil {
 				log.Printf("failed to upsert station %s: %v", rs.ID, err)
+				stats.FailedStations++
+			} else {
+				stats.TotalStations++
 			}
 		}
-		log.Printf("imported %d stations from region %d", len(stations), region)
+		stats.CompletedRegions++
+		log.Printf("imported %d stations from region %d (%d/%d)", len(stations), region, stats.CompletedRegions, totalRegions)
+		sendProgress()
 	}
+
+	stats.InProgress = false
+	sendProgress()
+	log.Printf("import complete: %d stations imported, %d failed", stats.TotalStations, stats.FailedStations)
 	return nil
 }
 

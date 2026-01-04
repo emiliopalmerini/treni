@@ -52,10 +52,8 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 		}
 		if count == 0 {
 			log.Println("no stations found, importing all stations...")
-			if err := stationService.ImportAllStations(context.Background()); err != nil {
+			if err := stationService.ImportAllStations(context.Background(), nil); err != nil {
 				log.Printf("failed to import stations: %v", err)
-			} else {
-				log.Println("station import completed")
 			}
 		}
 	}()
