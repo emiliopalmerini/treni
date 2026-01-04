@@ -32,3 +32,12 @@ Thumbs.db
 
 # Generated
 /gen/
+
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Binary
+/treni
