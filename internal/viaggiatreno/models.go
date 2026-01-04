@@ -59,21 +59,21 @@ type Arrival struct {
 
 // TrainStatus represents the full train journey from andamentoTreno.
 type TrainStatus struct {
-	TrainNumber       int     `json:"numeroTreno"`
-	Category          string  `json:"categoria"`
-	Origin            string  `json:"origine"`
-	OriginID          string  `json:"idOrigine"`
-	Destination       string  `json:"destinazione"`
-	DestinationID     string  `json:"idDestinazione"`
-	DepartureTime     int64   `json:"orarioPartenza"`
-	ArrivalTime       int64   `json:"orarioArrivo"`
-	Delay             int     `json:"ritardo"`
-	CirculationState  int     `json:"provvedimento"`
-	LastDetection     string  `json:"stazioneUltimoRilevamento"`
-	LastDetectionTime int64   `json:"oraUltimoRilevamento"`
-	Stops             []Stop  `json:"fermate"`
-	TrainType         string  `json:"tipoTreno"`
-	Cancelled         bool    `json:"provvedimento"` // derived
+	TrainNumber       int    `json:"numeroTreno"`
+	Category          string `json:"categoria"`
+	Origin            string `json:"origine"`
+	OriginID          string `json:"idOrigine"`
+	Destination       string `json:"destinazione"`
+	DestinationID     string `json:"idDestinazione"`
+	DepartureTime     int64  `json:"orarioPartenza"`
+	ArrivalTime       int64  `json:"orarioArrivo"`
+	Delay             int    `json:"ritardo"`
+	CirculationState  int    `json:"provvedimento"`
+	LastDetection     string `json:"stazioneUltimoRilevamento"`
+	LastDetectionTime int64  `json:"oraUltimoRilevamento"`
+	Stops             []Stop `json:"fermate"`
+	TrainType         string `json:"tipoTreno"`
+	Cancelled         bool   `json:"-"`
 }
 
 // Stop represents a stop in the train journey.

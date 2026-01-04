@@ -25,10 +25,10 @@ type WatchedTrain struct {
 }
 
 type TrainCheck struct {
-	ID           uuid.UUID `json:"id"`
-	WatchedID    uuid.UUID `json:"watchedId"`
-	TrainNumber  int       `json:"trainNumber"`
-	Delay        int       `json:"delay"`
-	Status       string    `json:"status"`
-	CheckedAt    time.Time `json:"checkedAt"`
+	ID          uuid.UUID `json:"id"`
+	WatchedID   uuid.UUID `json:"watchedId"`
+	TrainNumber int       `json:"trainNumber"`
+	Delay       int       `json:"delay"`
+	Status      string    `json:"status"`
+	CheckedAt   time.Time `json:"checkedAt"`
 }

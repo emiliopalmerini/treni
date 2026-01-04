@@ -80,13 +80,13 @@ func (s *Service) RecordFromAPI(ctx context.Context, originID, trainNumber strin
 
 	for _, stop := range status.Stops {
 		js := &JourneyStop{
-			ID:                 uuid.New(),
-			JourneyID:          journey.ID,
-			StationID:          stop.StationID,
-			StationName:        stop.StationName,
-			ArrivalDelay:       stop.ArrivalDelay,
-			DepartureDelay:     stop.DepartureDelay,
-			Platform:           stop.Platform,
+			ID:             uuid.New(),
+			JourneyID:      journey.ID,
+			StationID:      stop.StationID,
+			StationName:    stop.StationName,
+			ArrivalDelay:   stop.ArrivalDelay,
+			DepartureDelay: stop.DepartureDelay,
+			Platform:       stop.Platform,
 		}
 		if stop.ScheduledArrival > 0 {
 			t := time.UnixMilli(stop.ScheduledArrival)
