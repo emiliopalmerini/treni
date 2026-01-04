@@ -20,7 +20,7 @@ templ DeparturesPage(stationName string, stationID string) {
 		<section class="section">
 			<div class="section-header">
 				<div>
-					<h1>{ stationName }</h1>
+					<h1>{ stationName } <span class="text-muted">({ stationID })</span></h1>
 					<p class="subtitle">Partenze</p>
 				</div>
 				<button
@@ -105,7 +105,7 @@ templ ArrivalsPage(stationName string, stationID string) {
 		<section class="section">
 			<div class="section-header">
 				<div>
-					<h1>{ stationName }</h1>
+					<h1>{ stationName } <span class="text-muted">({ stationID })</span></h1>
 					<p class="subtitle">Arrivi</p>
 				</div>
 				<button

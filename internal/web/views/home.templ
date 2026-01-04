@@ -95,7 +95,7 @@ templ StationSearchResults(stations []viaggiatreno.Station) {
 			<tbody>
 				for _, s := range stations {
 					<tr>
-						<td class="font-bold">{ s.Name }</td>
+						<td class="font-bold">{ s.Name } <span class="text-muted">({ s.ID })</span></td>
 						<td class="actions">
 							<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm btn-outline">Partenze</a>
 							<button
@@ -128,7 +128,7 @@ templ FavoriteStations(stations []StationView) {
 			<tbody>
 				for _, s := range stations {
 					<tr id={ "fav-" + s.ID }>
-						<td class="font-bold">{ s.Name }</td>
+						<td class="font-bold">{ s.Name } <span class="text-muted">({ s.ID })</span></td>
 						<td class="actions">
 							<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm btn-outline">Partenze</a>
 							<a href={ templ.SafeURL("/arrivals?station=" + s.ID) } class="btn btn-sm btn-outline">Arrivi</a>
