@@ -28,24 +28,24 @@ type StopView struct {
 
 templ TrainSearchResults(trains []TrainMatchView) {
 	if len(trains) == 0 {
-		<p class="text-gray text-sm">Nessun treno trovato</p>
+		<p class="empty">Nessun treno trovato</p>
 	} else {
 		<table>
 			<thead>
 				<tr>
 					<th>Treno</th>
 					<th>Origine</th>
-					<th>Azioni</th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, t := range trains {
 					<tr>
-						<td>{ t.Number }</td>
+						<td class="train-num">{ t.Number }</td>
 						<td>{ t.Origin }</td>
-						<td>
+						<td class="actions">
 							<button
-								class="btn-sm"
+								class="btn btn-sm"
 								hx-get={ fmt.Sprintf("/api/train/%s?origin=%s&ts=%d", t.Number, t.OriginID, t.DepartureTS) }
 								hx-target="#train-detail-modal"
 								hx-swap="innerHTML"
@@ -69,43 +69,46 @@ type TrainMatchView struct {
 }
 
 templ TrainDetail(train TrainDetailView) {
-	<div class="card" style="margin-top: 1rem; border: 2px solid #3182ce;">
-		<div class="flex justify-between items-center mb-4">
+	<section class="section mt-4">
+		<div class="section-header">
 			<div>
-				<h2>
+				<h2 style="margin-bottom: 0.25rem">
 					if train.Category != "" {
-						<span class="text-gray">{ train.Category }</span>
+						<span class="train-cat">{ train.Category }</span>
 					}
-					Treno { fmt.Sprintf("%d", train.Number) }
+					{ fmt.Sprintf("%d", train.Number) }
 				</h2>
-				<p class="text-sm text-gray">{ train.Origin } → { train.Destination }</p>
+				<div class="route">
+					<span>{ train.Origin }</span>
+					<span class="route-arrow">→</span>
+					<span>{ train.Destination }</span>
+				</div>
 			</div>
-			<div>
-				if train.Delay > 0 {
-					<span class="badge badge-delay">+{ fmt.Sprintf("%d", train.Delay) } min</span>
-				} else {
-					<span class="badge badge-ok">In orario</span>
-				}
-			</div>
+			@TrainStatusBadge(train.Delay)
 		</div>
 		<table>
 			<thead>
 				<tr>
 					<th>Stazione</th>
-					<th>Arrivo</th>
-					<th>Partenza</th>
-					<th>Binario</th>
+					<th>Arr</th>
+					<th>Part</th>
+					<th>Bin</th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, s := range train.Stops {
-					<tr style={ stopRowStyle(s.IsPassed) }>
-						<td>{ s.Name }</td>
+					<tr class={ stopRowClass(s.IsPassed) }>
+						<td>
+							if s.IsPassed {
+								<span class="text-muted">✓</span>
+							}
+							{ s.Name }
+						</td>
 						<td>
 							if s.ScheduledArr != "" {
 								{ s.ScheduledArr }
 								if s.DelayArr > 0 {
-									<span class="delay text-sm"> (+{ fmt.Sprintf("%d", s.DelayArr) })</span>
+									<span class="text-muted text-xs"> +{ fmt.Sprintf("%d", s.DelayArr) }</span>
 								}
 							}
 						</td>
@@ -113,21 +116,35 @@ templ TrainDetail(train TrainDetailView) {
 							if s.ScheduledDep != "" {
 								{ s.ScheduledDep }
 								if s.DelayDep > 0 {
-									<span class="delay text-sm"> (+{ fmt.Sprintf("%d", s.DelayDep) })</span>
+									<span class="text-muted text-xs"> +{ fmt.Sprintf("%d", s.DelayDep) }</span>
 								}
 							}
 						</td>
-						<td>{ s.Platform }</td>
+						<td>
+							if s.Platform != "" {
+								<span class="platform">{ s.Platform }</span>
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
 					</tr>
 				}
 			</tbody>
 		</table>
-	</div>
+	</section>
 }
 
-func stopRowStyle(isPassed bool) string {
+templ TrainStatusBadge(delay int) {
+	if delay > 0 {
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) }'</span>
+	} else {
+		<span class="badge badge-ok">Orario</span>
+	}
+}
+
+func stopRowClass(isPassed bool) string {
 	if isPassed {
-		return "opacity: 0.5;"
+		return "text-muted"
 	}
 	return ""
 }

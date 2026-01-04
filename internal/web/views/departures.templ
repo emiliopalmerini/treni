@@ -16,16 +16,20 @@ type DepartureView struct {
 }
 
 templ DeparturesPage(stationName string, stationID string) {
-	@Layout("Partenze - " + stationName) {
-		<div class="card">
-			<div class="flex justify-between items-center mb-4">
-				<h2>Partenze da { stationName }</h2>
+	@Layout("Partenze · " + stationName) {
+		<section class="section">
+			<div class="section-header">
+				<div>
+					<h1>{ stationName }</h1>
+					<p class="subtitle">Partenze</p>
+				</div>
 				<button
+					class="btn btn-outline"
 					hx-get={ "/api/departures/" + stationID }
 					hx-target="#departures-table"
-					hx-indicator="#loading"
+					hx-indicator="#departures-loading"
 				>
-					<span id="loading" class="htmx-indicator">⏳</span>
+					<span class="spinner htmx-indicator" id="departures-loading"></span>
 					Aggiorna
 				</button>
 			</div>
@@ -35,75 +39,84 @@ templ DeparturesPage(stationName string, stationID string) {
 				hx-trigger="load"
 				hx-swap="innerHTML"
 			>
-				<div class="loading">Caricamento partenze...</div>
+				<div class="loading">
+					<div class="spinner"></div>
+					<span>Caricamento</span>
+				</div>
 			</div>
-		</div>
+		</section>
+		<div id="train-modal"></div>
 	}
 }
 
 templ DeparturesTable(departures []DepartureView) {
 	if len(departures) == 0 {
-		<p class="text-gray">Nessuna partenza trovata</p>
+		<p class="empty">Nessuna partenza</p>
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Orario</th>
+					<th>Ora</th>
 					<th>Treno</th>
 					<th>Destinazione</th>
-					<th>Ritardo</th>
-					<th>Binario</th>
-					<th></th>
+					<th>Stato</th>
+					<th>Bin</th>
+					<th class="hide-mobile"></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, d := range departures {
 					<tr>
-						<td>{ d.Time.Format("15:04") }</td>
+						<td class="font-bold">{ d.Time.Format("15:04") }</td>
 						<td>
 							if d.Category != "" {
-								<span class="text-gray text-sm">{ d.Category }</span>
+								<span class="train-cat">{ d.Category }</span>
 							}
-							{ fmt.Sprintf("%d", d.TrainNumber) }
+							<span class="train-num">{ fmt.Sprintf("%d", d.TrainNumber) }</span>
 						</td>
 						<td>{ d.Destination }</td>
 						<td>
-							if d.IsCancelled {
-								<span class="badge badge-delay">Cancellato</span>
-							} else if d.Delay > 0 {
-								<span class="delay">+{ fmt.Sprintf("%d", d.Delay) } min</span>
+							@DelayBadge(d.Delay, d.IsCancelled)
+						</td>
+						<td>
+							if d.Platform != "" {
+								<span class="platform">{ d.Platform }</span>
 							} else {
-								<span class="on-time">In orario</span>
+								<span class="text-muted">—</span>
 							}
 						</td>
-						<td>{ d.Platform }</td>
-						<td>
+						<td class="hide-mobile">
 							<button
-								class="btn-sm secondary"
+								class="btn btn-sm btn-outline"
 								hx-get={ fmt.Sprintf("/api/train/%d", d.TrainNumber) }
 								hx-target="#train-modal"
 								hx-swap="innerHTML"
 							>
-								Dettagli
+								Info
 							</button>
 						</td>
 					</tr>
 				}
 			</tbody>
 		</table>
-		<div id="train-modal"></div>
 	}
 }
 
 templ ArrivalsPage(stationName string, stationID string) {
-	@Layout("Arrivi - " + stationName) {
-		<div class="card">
-			<div class="flex justify-between items-center mb-4">
-				<h2>Arrivi a { stationName }</h2>
+	@Layout("Arrivi · " + stationName) {
+		<section class="section">
+			<div class="section-header">
+				<div>
+					<h1>{ stationName }</h1>
+					<p class="subtitle">Arrivi</p>
+				</div>
 				<button
+					class="btn btn-outline"
 					hx-get={ "/api/arrivals/" + stationID }
 					hx-target="#arrivals-table"
+					hx-indicator="#arrivals-loading"
 				>
+					<span class="spinner htmx-indicator" id="arrivals-loading"></span>
 					Aggiorna
 				</button>
 			</div>
@@ -113,9 +126,12 @@ templ ArrivalsPage(stationName string, stationID string) {
 				hx-trigger="load"
 				hx-swap="innerHTML"
 			>
-				<div class="loading">Caricamento arrivi...</div>
+				<div class="loading">
+					<div class="spinner"></div>
+					<span>Caricamento</span>
+				</div>
 			</div>
-		</div>
+		</section>
 	}
 }
 
@@ -131,42 +147,52 @@ type ArrivalView struct {
 
 templ ArrivalsTable(arrivals []ArrivalView) {
 	if len(arrivals) == 0 {
-		<p class="text-gray">Nessun arrivo trovato</p>
+		<p class="empty">Nessun arrivo</p>
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Orario</th>
+					<th>Ora</th>
 					<th>Treno</th>
 					<th>Provenienza</th>
-					<th>Ritardo</th>
-					<th>Binario</th>
+					<th>Stato</th>
+					<th>Bin</th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, a := range arrivals {
 					<tr>
-						<td>{ a.Time.Format("15:04") }</td>
+						<td class="font-bold">{ a.Time.Format("15:04") }</td>
 						<td>
 							if a.Category != "" {
-								<span class="text-gray text-sm">{ a.Category }</span>
+								<span class="train-cat">{ a.Category }</span>
 							}
-							{ fmt.Sprintf("%d", a.TrainNumber) }
+							<span class="train-num">{ fmt.Sprintf("%d", a.TrainNumber) }</span>
 						</td>
 						<td>{ a.Origin }</td>
 						<td>
-							if a.IsCancelled {
-								<span class="badge badge-delay">Cancellato</span>
-							} else if a.Delay > 0 {
-								<span class="delay">+{ fmt.Sprintf("%d", a.Delay) } min</span>
+							@DelayBadge(a.Delay, a.IsCancelled)
+						</td>
+						<td>
+							if a.Platform != "" {
+								<span class="platform">{ a.Platform }</span>
 							} else {
-								<span class="on-time">In orario</span>
+								<span class="text-muted">—</span>
 							}
 						</td>
-						<td>{ a.Platform }</td>
 					</tr>
 				}
 			</tbody>
 		</table>
+	}
+}
+
+templ DelayBadge(delay int, isCancelled bool) {
+	if isCancelled {
+		<span class="badge badge-error">Cancellato</span>
+	} else if delay > 0 {
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) }'</span>
+	} else {
+		<span class="badge badge-ok">Orario</span>
 	}
 }

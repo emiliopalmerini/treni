@@ -4,88 +4,102 @@ import "github.com/emiliopalmerini/treni/internal/viaggiatreno"
 
 templ Home() {
 	@Layout("Dashboard") {
-		<div class="grid grid-2">
-			<div class="card" x-data="{ query: '', stations: [] }">
+		<div class="grid-2">
+			<section class="section" x-data="{ query: '' }">
 				<h2>Cerca Stazione</h2>
-				<div class="flex gap-2 mb-4">
+				<div class="input-row">
 					<input
 						type="text"
+						class="form-input"
 						placeholder="Nome stazione..."
 						x-model="query"
 						@keyup.enter="$refs.searchBtn.click()"
-						style="flex: 1"
 					/>
 					<button
+						class="btn"
 						x-ref="searchBtn"
 						hx-get="/api/stations/search"
 						hx-trigger="click"
 						hx-target="#station-results"
+						hx-indicator="#station-loading"
 						:hx-vals="JSON.stringify({q: query})"
 					>
 						Cerca
 					</button>
 				</div>
-				<div id="station-results"></div>
-			</div>
-			<div class="card">
+				<div id="station-results" class="mt-2">
+					<div id="station-loading" class="loading htmx-indicator">
+						<div class="spinner"></div>
+						<span>Ricerca</span>
+					</div>
+				</div>
+			</section>
+			<section class="section" x-data="{ trainNum: '' }">
 				<h2>Cerca Treno</h2>
-				<div class="flex gap-2 mb-4" x-data="{ trainNum: '' }">
+				<div class="input-row">
 					<input
 						type="text"
+						class="form-input"
 						placeholder="Numero treno..."
 						x-model="trainNum"
 						@keyup.enter="$refs.trainBtn.click()"
-						style="flex: 1"
 					/>
 					<button
+						class="btn"
 						x-ref="trainBtn"
 						hx-get="/api/train/search"
 						hx-trigger="click"
 						hx-target="#train-results"
+						hx-indicator="#train-loading"
 						:hx-vals="JSON.stringify({q: trainNum})"
 					>
 						Cerca
 					</button>
 				</div>
-				<div id="train-results"></div>
-			</div>
+				<div id="train-results" class="mt-2">
+					<div id="train-loading" class="loading htmx-indicator">
+						<div class="spinner"></div>
+						<span>Ricerca</span>
+					</div>
+				</div>
+			</section>
 		</div>
-		<div class="card">
-			<div class="flex justify-between items-center mb-4">
-				<h2>Stazioni Preferite</h2>
-			</div>
+		<section class="section">
+			<h2>Stazioni Salvate</h2>
 			<div
+				id="favorites-list"
 				hx-get="/api/stations/favorites"
 				hx-trigger="load"
 				hx-swap="innerHTML"
 			>
-				<div class="loading">Caricamento...</div>
+				<div class="loading">
+					<div class="spinner"></div>
+					<span>Caricamento</span>
+				</div>
 			</div>
-		</div>
+		</section>
 	}
 }
 
 templ StationSearchResults(stations []viaggiatreno.Station) {
 	if len(stations) == 0 {
-		<p class="text-gray text-sm">Nessuna stazione trovata</p>
+		<p class="empty">Nessun risultato</p>
 	} else {
 		<table>
 			<thead>
 				<tr>
 					<th>Stazione</th>
-					<th>Azioni</th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, s := range stations {
 					<tr>
-						<td>{ s.Name }</td>
-						<td class="flex gap-2">
-							<a href={ templ.SafeURL("/departures?station=" + s.ID) }>
-								<button class="btn-sm">Partenze</button>
-							</a>
+						<td class="font-bold">{ s.Name }</td>
+						<td class="actions">
+							<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm btn-outline">Partenze</a>
 							<button
-								class="btn-sm secondary"
+								class="btn btn-sm"
 								hx-post={ "/api/stations/import/" + s.ID }
 								hx-swap="none"
 							>
@@ -101,26 +115,30 @@ templ StationSearchResults(stations []viaggiatreno.Station) {
 
 templ FavoriteStations(stations []StationView) {
 	if len(stations) == 0 {
-		<p class="text-gray text-sm">Nessuna stazione salvata. Cerca una stazione e clicca "Salva".</p>
+		<p class="empty">Nessuna stazione salvata</p>
 	} else {
 		<table>
 			<thead>
 				<tr>
 					<th>Stazione</th>
-					<th>Azioni</th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, s := range stations {
-					<tr>
-						<td>{ s.Name }</td>
-						<td class="flex gap-2">
-							<a href={ templ.SafeURL("/departures?station=" + s.ID) }>
-								<button class="btn-sm">Partenze</button>
-							</a>
-							<a href={ templ.SafeURL("/arrivals?station=" + s.ID) }>
-								<button class="btn-sm secondary">Arrivi</button>
-							</a>
+					<tr id={ "fav-" + s.ID }>
+						<td class="font-bold">{ s.Name }</td>
+						<td class="actions">
+							<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm btn-outline">Partenze</a>
+							<a href={ templ.SafeURL("/arrivals?station=" + s.ID) } class="btn btn-sm btn-outline">Arrivi</a>
+							<button
+								class="btn btn-sm btn-danger"
+								hx-delete={ "/api/stations/favorites/" + s.ID }
+								hx-target={ "#fav-" + s.ID }
+								hx-swap="outerHTML"
+							>
+								Rimuovi
+							</button>
 						</td>
 					</tr>
 				}

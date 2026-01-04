@@ -22,18 +22,19 @@ type TrainCheckView struct {
 
 templ WatchlistPage() {
 	@Layout("Watchlist") {
-		<div class="card">
-			<div class="flex justify-between items-center mb-4">
-				<h2>I Miei Treni</h2>
-				<div class="flex gap-2">
-					<button
-						hx-post="/api/watchlist/check-all"
-						hx-target="#watchlist-table"
-						hx-swap="innerHTML"
-					>
-						Controlla Tutti
-					</button>
-				</div>
+		<section class="section">
+			<div class="section-header">
+				<h2 style="margin-bottom: 0">Watchlist</h2>
+				<button
+					class="btn"
+					hx-post="/api/watchlist/check-all"
+					hx-target="#watchlist-table"
+					hx-swap="innerHTML"
+					hx-indicator="#check-all-loading"
+				>
+					<span class="spinner htmx-indicator" id="check-all-loading"></span>
+					Controlla Tutti
+				</button>
 			</div>
 			<div
 				id="watchlist-table"
@@ -41,50 +42,52 @@ templ WatchlistPage() {
 				hx-trigger="load"
 				hx-swap="innerHTML"
 			>
-				<div class="loading">Caricamento...</div>
+				<div class="loading">
+					<div class="spinner"></div>
+					<span>Caricamento</span>
+				</div>
 			</div>
-		</div>
-		<div class="card" x-data="{ showForm: false }">
-			<div class="flex justify-between items-center mb-4">
-				<h2>Aggiungi Treno</h2>
-				<button class="secondary" @click="showForm = !showForm" x-text="showForm ? 'Chiudi' : 'Nuovo'"></button>
+		</section>
+		<section class="section" x-data="{ open: false }">
+			<div class="section-header">
+				<h2 style="margin-bottom: 0">Aggiungi</h2>
+				<button class="btn btn-outline" @click="open = !open" x-text="open ? 'Chiudi' : 'Nuovo'"></button>
 			</div>
-			<div x-show="showForm" x-cloak>
+			<div x-show="open" x-cloak x-transition>
 				<form
 					hx-post="/api/watchlist"
 					hx-target="#watchlist-table"
 					hx-swap="innerHTML"
-					@htmx:after-request="showForm = false"
-					class="grid grid-2 gap-4"
+					@htmx:after-request="open = false"
 				>
-					<div>
-						<label class="text-sm text-gray">Numero Treno</label>
-						<input type="number" name="trainNumber" required style="width: 100%"/>
+					<div class="grid-2">
+						<div class="form-group">
+							<label class="form-label">Numero Treno</label>
+							<input type="number" name="trainNumber" class="form-input" required placeholder="9876"/>
+						</div>
+						<div class="form-group">
+							<label class="form-label">ID Stazione Origine</label>
+							<input type="text" name="originId" class="form-input" placeholder="S01700" required/>
+						</div>
+						<div class="form-group">
+							<label class="form-label">Nome Origine</label>
+							<input type="text" name="originName" class="form-input" placeholder="Milano Centrale" required/>
+						</div>
+						<div class="form-group">
+							<label class="form-label">Destinazione</label>
+							<input type="text" name="destination" class="form-input" placeholder="Roma Termini" required/>
+						</div>
 					</div>
-					<div>
-						<label class="text-sm text-gray">Stazione Origine (ID)</label>
-						<input type="text" name="originId" placeholder="es. S01700" required style="width: 100%"/>
-					</div>
-					<div>
-						<label class="text-sm text-gray">Nome Origine</label>
-						<input type="text" name="originName" placeholder="es. Milano Centrale" required style="width: 100%"/>
-					</div>
-					<div>
-						<label class="text-sm text-gray">Destinazione</label>
-						<input type="text" name="destination" placeholder="es. Roma Termini" required style="width: 100%"/>
-					</div>
-					<div style="grid-column: span 2;">
-						<button type="submit">Aggiungi alla Watchlist</button>
-					</div>
+					<button type="submit" class="btn mt-2">Aggiungi</button>
 				</form>
 			</div>
-		</div>
+		</section>
 	}
 }
 
 templ WatchlistTable(trains []WatchedTrainView) {
 	if len(trains) == 0 {
-		<p class="text-gray">Nessun treno nella watchlist. Aggiungi un treno da monitorare.</p>
+		<p class="empty">Nessun treno in watchlist</p>
 	} else {
 		<table>
 			<thead>
@@ -92,53 +95,13 @@ templ WatchlistTable(trains []WatchedTrainView) {
 					<th>Treno</th>
 					<th>Tratta</th>
 					<th>Stato</th>
-					<th>Ultimo Controllo</th>
-					<th>Azioni</th>
+					<th class="hide-mobile">Ultimo</th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, t := range trains {
-					<tr id={ "watch-" + t.ID }>
-						<td>{ fmt.Sprintf("%d", t.TrainNumber) }</td>
-						<td>{ t.OriginName } → { t.Destination }</td>
-						<td>
-							if t.LastCheck != nil {
-								if t.LastCheck.Status == "delayed" {
-									<span class="badge badge-delay">+{ fmt.Sprintf("%d", t.LastCheck.Delay) } min</span>
-								} else if t.LastCheck.Status == "on_time" {
-									<span class="badge badge-ok">In orario</span>
-								} else {
-									<span class="text-gray text-sm">{ t.LastCheck.Status }</span>
-								}
-							} else {
-								<span class="text-gray text-sm">Mai controllato</span>
-							}
-						</td>
-						<td class="text-sm text-gray">
-							if t.LastCheck != nil {
-								{ t.LastCheck.CheckedAt.Format("15:04") }
-							}
-						</td>
-						<td class="flex gap-2">
-							<button
-								class="btn-sm"
-								hx-post={ "/api/watchlist/" + t.ID + "/check" }
-								hx-target={ "#watch-" + t.ID }
-								hx-swap="outerHTML"
-							>
-								Controlla
-							</button>
-							<button
-								class="btn-sm danger"
-								hx-delete={ "/api/watchlist/" + t.ID }
-								hx-target={ "#watch-" + t.ID }
-								hx-swap="outerHTML"
-								hx-confirm="Rimuovere questo treno dalla watchlist?"
-							>
-								Rimuovi
-							</button>
-						</td>
-					</tr>
+					@WatchedTrainRow(t)
 				}
 			</tbody>
 		</table>
@@ -147,46 +110,55 @@ templ WatchlistTable(trains []WatchedTrainView) {
 
 templ WatchedTrainRow(t WatchedTrainView) {
 	<tr id={ "watch-" + t.ID }>
-		<td>{ fmt.Sprintf("%d", t.TrainNumber) }</td>
-		<td>{ t.OriginName } → { t.Destination }</td>
+		<td class="train-num">{ fmt.Sprintf("%d", t.TrainNumber) }</td>
 		<td>
-			if t.LastCheck != nil {
-				if t.LastCheck.Status == "delayed" {
-					<span class="badge badge-delay">+{ fmt.Sprintf("%d", t.LastCheck.Delay) } min</span>
-				} else if t.LastCheck.Status == "on_time" {
-					<span class="badge badge-ok">In orario</span>
-				} else {
-					<span class="text-gray text-sm">{ t.LastCheck.Status }</span>
-				}
-			} else {
-				<span class="text-gray text-sm">Mai controllato</span>
-			}
+			<div class="route">
+				<span>{ t.OriginName }</span>
+				<span class="route-arrow">→</span>
+				<span>{ t.Destination }</span>
+			</div>
 		</td>
-		<td class="text-sm text-gray">
+		<td>
+			@WatchlistStatusBadge(t.LastCheck)
+		</td>
+		<td class="hide-mobile text-muted text-sm">
 			if t.LastCheck != nil {
 				{ t.LastCheck.CheckedAt.Format("15:04") }
 			}
 		</td>
-		<td class="flex gap-2">
+		<td class="actions">
 			<button
-				class="btn-sm"
+				class="btn btn-sm btn-outline"
 				hx-post={ "/api/watchlist/" + t.ID + "/check" }
 				hx-target={ "#watch-" + t.ID }
 				hx-swap="outerHTML"
 			>
-				Controlla
+				Check
 			</button>
 			<button
-				class="btn-sm danger"
+				class="btn btn-sm btn-danger"
 				hx-delete={ "/api/watchlist/" + t.ID }
 				hx-target={ "#watch-" + t.ID }
 				hx-swap="outerHTML"
-				hx-confirm="Rimuovere questo treno dalla watchlist?"
 			>
 				Rimuovi
 			</button>
 		</td>
 	</tr>
+}
+
+templ WatchlistStatusBadge(check *TrainCheckView) {
+	if check == nil {
+		<span class="text-muted uppercase text-xs">—</span>
+	} else if check.Status == "delayed" {
+		<span class="badge badge-warning">+{ fmt.Sprintf("%d", check.Delay) }'</span>
+	} else if check.Status == "on_time" {
+		<span class="badge badge-ok">Orario</span>
+	} else if check.Status == "cancelled" {
+		<span class="badge badge-error">Cancellato</span>
+	} else {
+		<span class="text-muted uppercase text-xs">{ check.Status }</span>
+	}
 }
 
 templ EmptyRow() {
