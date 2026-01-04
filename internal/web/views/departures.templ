@@ -45,7 +45,6 @@ templ DeparturesPage(stationName string, stationID string) {
 				</div>
 			</div>
 		</section>
-		<div id="train-modal"></div>
 	}
 }
 
@@ -66,7 +65,13 @@ templ DeparturesTable(departures []DepartureView) {
 			</thead>
 			<tbody>
 				for _, d := range departures {
-					<tr>
+					<tr
+						class="expandable-row"
+						hx-get={ fmt.Sprintf("/api/train/%d", d.TrainNumber) }
+						hx-target={ fmt.Sprintf("#detail-%d", d.TrainNumber) }
+						hx-swap="innerHTML"
+						style="cursor: pointer;"
+					>
 						<td class="font-bold">{ d.Time.Format("15:04") }</td>
 						<td>
 							if d.Category != "" {
@@ -86,16 +91,10 @@ templ DeparturesTable(departures []DepartureView) {
 							}
 						</td>
 						<td class="hide-mobile">
-							<button
-								class="btn btn-sm btn-outline"
-								hx-get={ fmt.Sprintf("/api/train/%d", d.TrainNumber) }
-								hx-target="#train-modal"
-								hx-swap="innerHTML"
-							>
-								Info
-							</button>
+							<span class="btn btn-sm btn-outline">Info</span>
 						</td>
 					</tr>
+					<tr id={ fmt.Sprintf("detail-%d", d.TrainNumber) } class="detail-row"></tr>
 				}
 			</tbody>
 		</table>

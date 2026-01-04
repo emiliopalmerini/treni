@@ -100,7 +100,8 @@ templ StationSearchResults(stations []viaggiatreno.Station) {
 							<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm btn-outline">Partenze</a>
 							<button
 								class="btn btn-sm"
-								hx-post={ "/api/stations/import/" + s.ID }
+								hx-post={ "/api/stations/favorites" }
+								hx-vals={ `{"id":"` + s.ID + `","name":"` + s.Name + `"}` }
 								hx-swap="none"
 							>
 								Salva

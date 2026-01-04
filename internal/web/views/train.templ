@@ -69,69 +69,55 @@ type TrainMatchView struct {
 }
 
 templ TrainDetail(train TrainDetailView) {
-	<section class="section mt-4">
-		<div class="section-header">
-			<div>
-				<h2 style="margin-bottom: 0.25rem">
-					if train.Category != "" {
-						<span class="train-cat">{ train.Category }</span>
-					}
-					{ fmt.Sprintf("%d", train.Number) }
-				</h2>
-				<div class="route">
-					<span>{ train.Origin }</span>
-					<span class="route-arrow">→</span>
-					<span>{ train.Destination }</span>
+	<td colspan="6" class="detail-cell">
+		<div class="detail-content">
+			<div class="detail-header">
+				<div>
+					<span class="detail-title">
+						if train.Category != "" {
+							<span class="train-cat">{ train.Category }</span>
+						}
+						{ fmt.Sprintf("%d", train.Number) }
+					</span>
+					<span class="detail-route">
+						{ train.Origin } → { train.Destination }
+					</span>
 				</div>
+				@TrainStatusBadge(train.Delay)
 			</div>
-			@TrainStatusBadge(train.Delay)
-		</div>
-		<table>
-			<thead>
-				<tr>
-					<th>Stazione</th>
-					<th>Arr</th>
-					<th>Part</th>
-					<th>Bin</th>
-				</tr>
-			</thead>
-			<tbody>
+			<div class="stops-list">
 				for _, s := range train.Stops {
-					<tr class={ stopRowClass(s.IsPassed) }>
-						<td>
+					<div class={ "stop-item", templ.KV("stop-passed", s.IsPassed) }>
+						<span class="stop-name">
 							if s.IsPassed {
-								<span class="text-muted">✓</span>
+								<span class="check">✓</span>
 							}
 							{ s.Name }
-						</td>
-						<td>
+						</span>
+						<span class="stop-times">
 							if s.ScheduledArr != "" {
-								{ s.ScheduledArr }
+								<span>{ s.ScheduledArr }</span>
 								if s.DelayArr > 0 {
-									<span class="text-muted text-xs"> +{ fmt.Sprintf("%d", s.DelayArr) }</span>
+									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayArr) }</span>
 								}
 							}
-						</td>
-						<td>
 							if s.ScheduledDep != "" {
-								{ s.ScheduledDep }
+								<span>{ s.ScheduledDep }</span>
 								if s.DelayDep > 0 {
-									<span class="text-muted text-xs"> +{ fmt.Sprintf("%d", s.DelayDep) }</span>
+									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayDep) }</span>
 								}
 							}
-						</td>
-						<td>
+						</span>
+						<span class="stop-platform">
 							if s.Platform != "" {
 								<span class="platform">{ s.Platform }</span>
-							} else {
-								<span class="text-muted">—</span>
 							}
-						</td>
-					</tr>
+						</span>
+					</div>
 				}
-			</tbody>
-		</table>
-	</section>
+			</div>
+		</div>
+	</td>
 }
 
 templ TrainStatusBadge(delay int) {
