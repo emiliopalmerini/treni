@@ -1,0 +1,246 @@
+package views
+
+import (
+	"fmt"
+	"time"
+)
+
+type GlobalStatsView struct {
+	TotalObservations int
+	AverageDelay      float64
+	OnTimePercentage  float64
+	CancelledCount    int
+}
+
+type CategoryStatsView struct {
+	Category         string
+	ObservationCount int
+	AverageDelay     float64
+	OnTimePercentage float64
+}
+
+type TrainStatsView struct {
+	TrainNumber      int
+	Category         string
+	OriginName       string
+	DestinationName  string
+	ObservationCount int
+	AverageDelay     float64
+	MaxDelay         int
+	OnTimePercentage float64
+}
+
+type StationStatsView struct {
+	StationID        string
+	StationName      string
+	ObservationCount int
+	AverageDelay     float64
+	OnTimePercentage float64
+}
+
+type ObservationView struct {
+	ObservedAt      time.Time
+	StationName     string
+	ObservationType string
+	TrainNumber     int
+	TrainCategory   string
+	OriginName      string
+	DestinationName string
+	Delay           int
+	IsCancelled     bool
+}
+
+type StatsPageView struct {
+	Global             GlobalStatsView
+	Categories         []CategoryStatsView
+	WorstTrains        []TrainStatsView
+	WorstStations      []StationStatsView
+	RecentObservations []ObservationView
+}
+
+templ StatsPage(stats StatsPageView) {
+	@Layout("Statistiche") {
+		<section class="section">
+			<h2>Panoramica</h2>
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.Global.TotalObservations) }</div>
+					<div class="stat-label">Osservazioni</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%.1f", stats.Global.AverageDelay) }'</div>
+					<div class="stat-label">Ritardo Medio</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%.1f", stats.Global.OnTimePercentage) }%</div>
+					<div class="stat-label">In Orario</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.Global.CancelledCount) }</div>
+					<div class="stat-label">Cancellati</div>
+				</div>
+			</div>
+		</section>
+		if len(stats.Categories) > 0 {
+			<section class="section">
+				<h2>Per Categoria</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Categoria</th>
+							<th>Osservazioni</th>
+							<th>Ritardo Medio</th>
+							<th>In Orario</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, c := range stats.Categories {
+							<tr>
+								<td class="font-bold">{ c.Category }</td>
+								<td>{ fmt.Sprintf("%d", c.ObservationCount) }</td>
+								<td>
+									if c.AverageDelay > 5 {
+										<span class="text-warning">{ fmt.Sprintf("%.1f", c.AverageDelay) }'</span>
+									} else {
+										{ fmt.Sprintf("%.1f", c.AverageDelay) }'
+									}
+								</td>
+								<td>
+									if c.OnTimePercentage >= 80 {
+										<span class="text-ok">{ fmt.Sprintf("%.1f", c.OnTimePercentage) }%</span>
+									} else if c.OnTimePercentage >= 50 {
+										<span class="text-warning">{ fmt.Sprintf("%.1f", c.OnTimePercentage) }%</span>
+									} else {
+										<span class="text-error">{ fmt.Sprintf("%.1f", c.OnTimePercentage) }%</span>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</section>
+		}
+		if len(stats.WorstTrains) > 0 {
+			<section class="section">
+				<h2>Treni Peggiori</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Treno</th>
+							<th class="hide-mobile">Tratta</th>
+							<th>Oss.</th>
+							<th>Ritardo</th>
+							<th>Max</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, t := range stats.WorstTrains {
+							<tr>
+								<td>
+									if t.Category != "" {
+										<span class="train-cat">{ t.Category }</span>
+									}
+									<span class="train-num">{ fmt.Sprintf("%d", t.TrainNumber) }</span>
+								</td>
+								<td class="hide-mobile">
+									<div class="route">
+										<span>{ t.OriginName }</span>
+										<span class="route-arrow">→</span>
+										<span>{ t.DestinationName }</span>
+									</div>
+								</td>
+								<td>{ fmt.Sprintf("%d", t.ObservationCount) }</td>
+								<td class="text-warning font-bold">{ fmt.Sprintf("%.1f", t.AverageDelay) }'</td>
+								<td class="text-error">{ fmt.Sprintf("%d", t.MaxDelay) }'</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</section>
+		}
+		if len(stats.WorstStations) > 0 {
+			<section class="section">
+				<h2>Stazioni Peggiori</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Stazione</th>
+							<th>Osservazioni</th>
+							<th>Ritardo Medio</th>
+							<th>In Orario</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, s := range stats.WorstStations {
+							<tr>
+								<td class="font-bold">{ s.StationName }</td>
+								<td>{ fmt.Sprintf("%d", s.ObservationCount) }</td>
+								<td class="text-warning">{ fmt.Sprintf("%.1f", s.AverageDelay) }'</td>
+								<td>{ fmt.Sprintf("%.1f", s.OnTimePercentage) }%</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</section>
+		}
+		if len(stats.RecentObservations) > 0 {
+			<section class="section">
+				<h2>Ultime Osservazioni</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Ora</th>
+							<th>Treno</th>
+							<th class="hide-mobile">Stazione</th>
+							<th>Stato</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, o := range stats.RecentObservations {
+							<tr>
+								<td class="text-muted text-sm">{ o.ObservedAt.Format("15:04") }</td>
+								<td>
+									if o.TrainCategory != "" {
+										<span class="train-cat">{ o.TrainCategory }</span>
+									}
+									<span class="train-num">{ fmt.Sprintf("%d", o.TrainNumber) }</span>
+								</td>
+								<td class="hide-mobile">{ o.StationName }</td>
+								<td>
+									@DelayBadge(o.Delay, o.IsCancelled)
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</section>
+		}
+		if stats.Global.TotalObservations == 0 {
+			<section class="section">
+				<p class="empty">Nessuna osservazione registrata. Visita le pagine Partenze o Arrivi per iniziare a raccogliere dati.</p>
+			</section>
+		}
+	}
+}
+
+templ StationStatsSection(stats StationStatsView) {
+	<div class="station-stats">
+		<div class="stats-mini">
+			<span class="stat-mini">
+				<strong>{ fmt.Sprintf("%d", stats.ObservationCount) }</strong> osservazioni
+			</span>
+			<span class="stat-mini">
+				<strong>{ fmt.Sprintf("%.1f", stats.AverageDelay) }'</strong> ritardo medio
+			</span>
+			<span class="stat-mini">
+				<strong>{ fmt.Sprintf("%.1f", stats.OnTimePercentage) }%</strong> in orario
+			</span>
+		</div>
+	</div>
+}
+
+templ StationStatsEmpty() {
+	<div class="station-stats">
+		<p class="text-muted text-sm">Nessuna statistica disponibile</p>
+	</div>
+}

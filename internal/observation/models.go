@@ -14,21 +14,21 @@ const (
 )
 
 type TrainObservation struct {
-	ID              uuid.UUID       `json:"id"`
-	ObservedAt      time.Time       `json:"observedAt"`
-	StationID       string          `json:"stationId"`
-	StationName     string          `json:"stationName"`
-	ObservationType ObservationType `json:"observationType"`
-	TrainNumber     int             `json:"trainNumber"`
-	TrainCategory   string          `json:"trainCategory"`
-	OriginID        string          `json:"originId"`
-	OriginName      string          `json:"originName"`
-	DestinationID   string          `json:"destinationId"`
-	DestinationName string          `json:"destinationName"`
-	ScheduledTime   time.Time       `json:"scheduledTime"`
-	Delay           int             `json:"delay"`
-	Platform        string          `json:"platform"`
-	CirculationState int            `json:"circulationState"`
+	ID               uuid.UUID       `json:"id"`
+	ObservedAt       time.Time       `json:"observedAt"`
+	StationID        string          `json:"stationId"`
+	StationName      string          `json:"stationName"`
+	ObservationType  ObservationType `json:"observationType"`
+	TrainNumber      int             `json:"trainNumber"`
+	TrainCategory    string          `json:"trainCategory"`
+	OriginID         string          `json:"originId"`
+	OriginName       string          `json:"originName"`
+	DestinationID    string          `json:"destinationId"`
+	DestinationName  string          `json:"destinationName"`
+	ScheduledTime    time.Time       `json:"scheduledTime"`
+	Delay            int             `json:"delay"`
+	Platform         string          `json:"platform"`
+	CirculationState int             `json:"circulationState"`
 }
 
 type GlobalStats struct {

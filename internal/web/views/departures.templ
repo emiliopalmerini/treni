@@ -22,6 +22,12 @@ templ DeparturesPage(stationName string, stationID string, detectLocation bool) 
 				<div>
 					<h1>{ stationName } <span class="text-muted">({ stationID })</span></h1>
 					<p class="subtitle">Partenze</p>
+					<div
+						id="station-stats"
+						hx-get={ "/api/stats/station/" + stationID }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+					></div>
 				</div>
 				<button
 					class="btn btn-outline"
@@ -131,6 +137,12 @@ templ ArrivalsPage(stationName string, stationID string) {
 				<div>
 					<h1>{ stationName } <span class="text-muted">({ stationID })</span></h1>
 					<p class="subtitle">Arrivi</p>
+					<div
+						id="station-stats"
+						hx-get={ "/api/stats/station/" + stationID }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+					></div>
 				</div>
 				<button
 					class="btn btn-outline"

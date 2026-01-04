@@ -11,6 +11,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Get("/departures", h.DeparturesPage)
 	r.Get("/arrivals", h.ArrivalsPage)
 	r.Get("/watchlist", h.WatchlistPage)
+	r.Get("/stats", h.StatsPage)
 
 	// HTMX API endpoints
 	r.Route("/api", func(r chi.Router) {
@@ -24,6 +25,9 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 		// Departures/Arrivals
 		r.Get("/departures/{stationID}", h.GetDepartures)
 		r.Get("/arrivals/{stationID}", h.GetArrivals)
+
+		// Stats
+		r.Get("/stats/station/{stationID}", h.GetStationStats)
 
 		// Trains
 		r.Get("/train/search", h.SearchTrains)

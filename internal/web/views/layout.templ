@@ -487,7 +487,60 @@ templ Layout(title string) {
 					text-align: right;
 				}
 
+				/* Stats */
+				.stats-grid {
+					display: grid;
+					grid-template-columns: repeat(4, 1fr);
+					gap: 1rem;
+					margin-bottom: 1.5rem;
+				}
+
+				.stat-card {
+					padding: 1.5rem;
+					border: 2px solid #000;
+					text-align: center;
+				}
+
+				.stat-value {
+					font-size: 2rem;
+					font-weight: 800;
+					line-height: 1;
+					margin-bottom: 0.25rem;
+				}
+
+				.stat-label {
+					font-size: 0.75rem;
+					text-transform: uppercase;
+					letter-spacing: 0.05em;
+					opacity: 0.6;
+				}
+
+				.stats-mini {
+					display: flex;
+					gap: 1.5rem;
+					flex-wrap: wrap;
+				}
+
+				.stat-mini {
+					font-size: 0.875rem;
+				}
+
+				.stat-mini strong {
+					font-weight: 700;
+				}
+
+				.station-stats {
+					padding: 0.5rem 0 0 0;
+				}
+
+				.text-ok { color: #000; font-weight: 600; }
+				.text-warning { color: #666; }
+				.text-error { color: #999; }
+
+				.mt-2 { margin-top: 1rem; }
+
 				@media (max-width: 768px) {
+					.stats-grid { grid-template-columns: repeat(2, 1fr); }
 					.container { padding: 0 1rem; }
 					main { padding: 2rem 0; }
 					.section { margin-bottom: 3rem; }
@@ -508,6 +561,7 @@ templ Layout(title string) {
 						<a href="/">Home</a>
 						<a href="/departures">Partenze</a>
 						<a href="/watchlist">Watchlist</a>
+						<a href="/stats">Statistiche</a>
 					</nav>
 				</div>
 			</header>

@@ -13,6 +13,8 @@ import (
 	"github.com/emiliopalmerini/treni/internal/journey"
 	journeyPersistence "github.com/emiliopalmerini/treni/internal/journey/persistence"
 	"github.com/emiliopalmerini/treni/internal/middleware"
+	"github.com/emiliopalmerini/treni/internal/observation"
+	observationPersistence "github.com/emiliopalmerini/treni/internal/observation/persistence"
 	"github.com/emiliopalmerini/treni/internal/realtime"
 	"github.com/emiliopalmerini/treni/internal/station"
 	stationPersistence "github.com/emiliopalmerini/treni/internal/station/persistence"
@@ -74,8 +76,12 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	watchlistHandler := watchlist.NewHandler(watchlistService)
 	watchlist.RegisterRoutes(r, watchlistHandler)
 
+	// Observation module
+	observationRepo := observationPersistence.NewSQLiteRepository(db)
+	observationService := observation.NewService(observationRepo)
+
 	// Web UI
-	webHandler := web.NewHandler(vtClient, stationService, watchlistService)
+	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService)
 	web.RegisterRoutes(r, webHandler)
 
 	return &http.Server{

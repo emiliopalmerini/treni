@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/emiliopalmerini/treni/internal/observation"
 	"github.com/emiliopalmerini/treni/internal/station"
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 	"github.com/emiliopalmerini/treni/internal/watchlist"
@@ -15,20 +17,23 @@ import (
 )
 
 type Handler struct {
-	vtClient         viaggiatreno.Client
-	stationService   *station.Service
-	watchlistService *watchlist.Service
+	vtClient           viaggiatreno.Client
+	stationService     *station.Service
+	watchlistService   *watchlist.Service
+	observationService *observation.Service
 }
 
 func NewHandler(
 	vtClient viaggiatreno.Client,
 	stationService *station.Service,
 	watchlistService *watchlist.Service,
+	observationService *observation.Service,
 ) *Handler {
 	return &Handler{
-		vtClient:         vtClient,
-		stationService:   stationService,
-		watchlistService: watchlistService,
+		vtClient:           vtClient,
+		stationService:     stationService,
+		watchlistService:   watchlistService,
+		observationService: observationService,
 	}
 }
 
@@ -61,6 +66,36 @@ func (h *Handler) ArrivalsPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) WatchlistPage(w http.ResponseWriter, r *http.Request) {
 	views.WatchlistPage().Render(r.Context(), w)
+}
+
+func (h *Handler) StatsPage(w http.ResponseWriter, r *http.Request) {
+	globalStats, _ := h.observationService.GetGlobalStats(r.Context())
+	categoryStats, _ := h.observationService.GetStatsByCategory(r.Context())
+	worstTrains, _ := h.observationService.GetWorstTrains(r.Context(), 10)
+	worstStations, _ := h.observationService.GetWorstStations(r.Context(), 10)
+	recentObs, _ := h.observationService.GetRecentObservations(r.Context(), 20)
+
+	statsView := views.StatsPageView{
+		Global:             toGlobalStatsView(globalStats),
+		Categories:         toCategoryStatsViews(categoryStats),
+		WorstTrains:        toTrainStatsViews(worstTrains),
+		WorstStations:      toStationStatsViews(worstStations),
+		RecentObservations: toObservationViews(recentObs),
+	}
+
+	views.StatsPage(statsView).Render(r.Context(), w)
+}
+
+func (h *Handler) GetStationStats(w http.ResponseWriter, r *http.Request) {
+	stationID := chi.URLParam(r, "stationID")
+
+	stats, err := h.observationService.GetStatsByStation(r.Context(), stationID)
+	if err != nil || stats == nil {
+		views.StationStatsEmpty().Render(r.Context(), w)
+		return
+	}
+
+	views.StationStatsSection(toStationStatsView(stats)).Render(r.Context(), w)
 }
 
 // API endpoints for HTMX
@@ -173,6 +208,9 @@ func (h *Handler) GetDepartures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stationName := h.getStationName(r, stationID)
+	go h.observationService.RecordDepartures(context.Background(), stationID, stationName, departures)
+
 	departureViews := make([]views.DepartureView, len(departures))
 	for i, d := range departures {
 		departureViews[i] = views.DepartureView{
@@ -197,6 +235,9 @@ func (h *Handler) GetArrivals(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	stationName := h.getStationName(r, stationID)
+	go h.observationService.RecordArrivals(context.Background(), stationID, stationName, arrivals)
 
 	arrivalViews := make([]views.ArrivalView, len(arrivals))
 	for i, a := range arrivals {
@@ -442,4 +483,85 @@ func (h *Handler) getStationName(r *http.Request, stationID string) string {
 
 func parseUUID(s string) (watchlist.UUID, error) {
 	return watchlist.ParseUUID(s)
+}
+
+func toGlobalStatsView(s *observation.GlobalStats) views.GlobalStatsView {
+	if s == nil {
+		return views.GlobalStatsView{}
+	}
+	return views.GlobalStatsView{
+		TotalObservations: s.TotalObservations,
+		AverageDelay:      s.AverageDelay,
+		OnTimePercentage:  s.OnTimePercentage,
+		CancelledCount:    s.CancelledCount,
+	}
+}
+
+func toCategoryStatsViews(stats []*observation.CategoryStats) []views.CategoryStatsView {
+	result := make([]views.CategoryStatsView, len(stats))
+	for i, s := range stats {
+		result[i] = views.CategoryStatsView{
+			Category:         s.Category,
+			ObservationCount: s.ObservationCount,
+			AverageDelay:     s.AverageDelay,
+			OnTimePercentage: s.OnTimePercentage,
+		}
+	}
+	return result
+}
+
+func toTrainStatsViews(stats []*observation.TrainStats) []views.TrainStatsView {
+	result := make([]views.TrainStatsView, len(stats))
+	for i, s := range stats {
+		result[i] = views.TrainStatsView{
+			TrainNumber:      s.TrainNumber,
+			Category:         s.Category,
+			OriginName:       s.OriginName,
+			DestinationName:  s.DestinationName,
+			ObservationCount: s.ObservationCount,
+			AverageDelay:     s.AverageDelay,
+			MaxDelay:         s.MaxDelay,
+			OnTimePercentage: s.OnTimePercentage,
+		}
+	}
+	return result
+}
+
+func toStationStatsViews(stats []*observation.StationStats) []views.StationStatsView {
+	result := make([]views.StationStatsView, len(stats))
+	for i, s := range stats {
+		result[i] = toStationStatsView(s)
+	}
+	return result
+}
+
+func toStationStatsView(s *observation.StationStats) views.StationStatsView {
+	if s == nil {
+		return views.StationStatsView{}
+	}
+	return views.StationStatsView{
+		StationID:        s.StationID,
+		StationName:      s.StationName,
+		ObservationCount: s.ObservationCount,
+		AverageDelay:     s.AverageDelay,
+		OnTimePercentage: s.OnTimePercentage,
+	}
+}
+
+func toObservationViews(obs []*observation.TrainObservation) []views.ObservationView {
+	result := make([]views.ObservationView, len(obs))
+	for i, o := range obs {
+		result[i] = views.ObservationView{
+			ObservedAt:      o.ObservedAt,
+			StationName:     o.StationName,
+			ObservationType: string(o.ObservationType),
+			TrainNumber:     o.TrainNumber,
+			TrainCategory:   o.TrainCategory,
+			OriginName:      o.OriginName,
+			DestinationName: o.DestinationName,
+			Delay:           o.Delay,
+			IsCancelled:     o.CirculationState == 1,
+		}
+	}
+	return result
 }

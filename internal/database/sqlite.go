@@ -91,6 +91,29 @@ func migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_train_check_watched_id ON train_check(watched_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_train_check_checked_at ON train_check(checked_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_station_name ON station(name)`,
+
+		`CREATE TABLE IF NOT EXISTS train_observation (
+			id TEXT PRIMARY KEY,
+			observed_at DATETIME NOT NULL,
+			station_id TEXT NOT NULL,
+			station_name TEXT NOT NULL,
+			observation_type TEXT NOT NULL,
+			train_number INTEGER NOT NULL,
+			train_category TEXT,
+			origin_id TEXT,
+			origin_name TEXT,
+			destination_id TEXT,
+			destination_name TEXT,
+			scheduled_time DATETIME,
+			delay INTEGER DEFAULT 0,
+			platform TEXT,
+			circulation_state INTEGER DEFAULT 0
+		)`,
+
+		`CREATE INDEX IF NOT EXISTS idx_observation_train ON train_observation(train_number)`,
+		`CREATE INDEX IF NOT EXISTS idx_observation_station ON train_observation(station_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_observation_observed ON train_observation(observed_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_observation_category ON train_observation(train_category)`,
 	}
 
 	for _, m := range migrations {
