@@ -102,7 +102,8 @@ templ StationSearchResults(stations []viaggiatreno.Station) {
 								class="btn btn-sm"
 								hx-post={ "/api/stations/favorites" }
 								hx-vals={ `{"id":"` + s.ID + `","name":"` + s.Name + `"}` }
-								hx-swap="none"
+								hx-target="#favorites-list"
+								hx-swap="innerHTML"
 							>
 								Salva
 							</button>

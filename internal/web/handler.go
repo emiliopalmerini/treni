@@ -116,7 +116,7 @@ func (h *Handler) AddFavoriteStation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	h.GetFavoriteStations(w, r)
 }
 
 func (h *Handler) DeleteFavoriteStation(w http.ResponseWriter, r *http.Request) {
