@@ -1,4 +1,4 @@
-.PHONY: all fmt vet build run test clean
+.PHONY: all fmt vet templ build run test clean
 
 BINARY_NAME=treni
 CMD_PATH=./cmd
@@ -11,7 +11,10 @@ fmt:
 vet: fmt
 	go vet ./...
 
-build: vet
+templ:
+	templ generate
+
+build: vet templ
 	go build -o $(BINARY_NAME) $(CMD_PATH)
 
 run: build
