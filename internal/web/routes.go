@@ -15,6 +15,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 		r.Get("/stations/search", h.SearchStations)
 		r.Get("/stations/favorites", h.GetFavoriteStations)
 		r.Post("/stations/import/{id}", h.ImportStation)
+		r.Delete("/stations/favorites/{id}", h.DeleteFavoriteStation)
 
 		// Departures/Arrivals
 		r.Get("/departures/{stationID}", h.GetDepartures)

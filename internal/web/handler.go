@@ -104,6 +104,15 @@ func (h *Handler) ImportStation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *Handler) DeleteFavoriteStation(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.stationService.Delete(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	views.EmptyRow().Render(r.Context(), w)
+}
+
 func (h *Handler) GetDepartures(w http.ResponseWriter, r *http.Request) {
 	stationID := chi.URLParam(r, "stationID")
 
