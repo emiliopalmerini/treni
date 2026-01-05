@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/emiliopalmerini/treni/internal/itinerary"
 	"github.com/emiliopalmerini/treni/internal/observation"
 	"github.com/emiliopalmerini/treni/internal/preferita"
 	"github.com/emiliopalmerini/treni/internal/station"
@@ -23,6 +24,7 @@ type Handler struct {
 	watchlistService   *watchlist.Service
 	observationService *observation.Service
 	preferitaService   *preferita.Service
+	itineraryService   *itinerary.Service
 }
 
 func NewHandler(
@@ -31,6 +33,7 @@ func NewHandler(
 	watchlistService *watchlist.Service,
 	observationService *observation.Service,
 	preferitaService *preferita.Service,
+	itineraryService *itinerary.Service,
 ) *Handler {
 	return &Handler{
 		vtClient:           vtClient,
@@ -38,6 +41,7 @@ func NewHandler(
 		watchlistService:   watchlistService,
 		observationService: observationService,
 		preferitaService:   preferitaService,
+		itineraryService:   itineraryService,
 	}
 }
 
@@ -279,6 +283,48 @@ func (h *Handler) GetArrivals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	views.ArrivalsTable(arrivalViews).Render(r.Context(), w)
+}
+
+func (h *Handler) SearchItinerary(w http.ResponseWriter, r *http.Request) {
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+
+	if from == "" || to == "" {
+		views.ItineraryResults(nil).Render(r.Context(), w)
+		return
+	}
+
+	solutions, err := h.itineraryService.FindSolutions(r.Context(), from, to)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	solutionViews := make([]views.SolutionView, len(solutions))
+	for i, sol := range solutions {
+		legViews := make([]views.LegView, len(sol.Legs))
+		for j, leg := range sol.Legs {
+			legViews[j] = views.LegView{
+				TrainNumber: leg.TrainNumber,
+				TrainType:   leg.TrainType,
+				FromName:    leg.From.Name,
+				ToName:      leg.To.Name,
+				DepartureAt: leg.DepartureAt,
+				ArrivalAt:   leg.ArrivalAt,
+				Platform:    leg.Platform,
+				Delay:       leg.Delay,
+			}
+		}
+		solutionViews[i] = views.SolutionView{
+			Legs:        legViews,
+			DepartureAt: sol.DepartureAt,
+			ArrivalAt:   sol.ArrivalAt,
+			Duration:    sol.Duration,
+			Changes:     sol.Changes,
+		}
+	}
+
+	views.ItineraryResults(solutionViews).Render(r.Context(), w)
 }
 
 func (h *Handler) SearchTrains(w http.ResponseWriter, r *http.Request) {

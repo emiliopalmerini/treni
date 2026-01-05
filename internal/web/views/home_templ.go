@@ -47,7 +47,7 @@ func Home() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <div class=\"grid-2\"><section class=\"section\" x-data=\"{ query: '' }\"><h2>Cerca Stazione</h2><div class=\"input-row\"><input type=\"text\" class=\"form-input\" placeholder=\"Nome stazione...\" x-model=\"query\" @keyup.enter=\"$refs.searchBtn.click()\"> <button class=\"btn\" x-ref=\"searchBtn\" hx-get=\"/api/stations/search\" hx-trigger=\"click\" hx-target=\"#station-results\" hx-indicator=\"#station-loading\" :hx-vals=\"JSON.stringify({q: query})\">Cerca</button></div><div id=\"station-results\" class=\"mt-2\"><div id=\"station-loading\" class=\"loading htmx-indicator\"><div class=\"spinner\"></div><span>Ricerca</span></div></div></section><section class=\"section\" x-data=\"{ trainNum: '' }\"><h2>Cerca Treno</h2><div class=\"input-row\"><input type=\"text\" class=\"form-input\" placeholder=\"Numero treno...\" x-model=\"trainNum\" @keyup.enter=\"$refs.trainBtn.click()\"> <button class=\"btn\" x-ref=\"trainBtn\" hx-get=\"/api/train/search\" hx-trigger=\"click\" hx-target=\"#train-results\" hx-indicator=\"#train-loading\" :hx-vals=\"JSON.stringify({q: trainNum})\">Cerca</button></div><div id=\"train-results\" class=\"mt-2\"><div id=\"train-loading\" class=\"loading htmx-indicator\"><div class=\"spinner\"></div><span>Ricerca</span></div></div></section></div><section class=\"section\"><h2>Stazioni Preferite</h2><div id=\"favorites-list\" hx-get=\"/api/stations/favorites\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><div class=\"loading\"><div class=\"spinner\"></div><span>Caricamento</span></div></div></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <div class=\"grid-2\"><section class=\"section\" x-data=\"{ query: '' }\"><h2>Cerca Stazione</h2><div class=\"input-row\"><input type=\"text\" class=\"form-input\" placeholder=\"Nome stazione...\" x-model=\"query\" @keyup.enter=\"$refs.searchBtn.click()\"> <button class=\"btn\" x-ref=\"searchBtn\" hx-get=\"/api/stations/search\" hx-trigger=\"click\" hx-target=\"#station-results\" hx-indicator=\"#station-loading\" :hx-vals=\"JSON.stringify({q: query})\">Cerca</button></div><div id=\"station-results\" class=\"mt-2\"><div id=\"station-loading\" class=\"loading htmx-indicator\"><div class=\"spinner\"></div><span>Ricerca</span></div></div></section><section class=\"section\" x-data=\"{ trainNum: '' }\"><h2>Cerca Treno</h2><div class=\"input-row\"><input type=\"text\" class=\"form-input\" placeholder=\"Numero treno...\" x-model=\"trainNum\" @keyup.enter=\"$refs.trainBtn.click()\"> <button class=\"btn\" x-ref=\"trainBtn\" hx-get=\"/api/train/search\" hx-trigger=\"click\" hx-target=\"#train-results\" hx-indicator=\"#train-loading\" :hx-vals=\"JSON.stringify({q: trainNum})\">Cerca</button></div><div id=\"train-results\" class=\"mt-2\"><div id=\"train-loading\" class=\"loading htmx-indicator\"><div class=\"spinner\"></div><span>Ricerca</span></div></div></section></div><section class=\"section\" x-data=\"{\n\t\t\t\tfromId: '',\n\t\t\t\tfromName: '',\n\t\t\t\tfromQuery: '',\n\t\t\t\tfromResults: [],\n\t\t\t\tshowFromResults: false,\n\t\t\t\ttoId: '',\n\t\t\t\ttoName: '',\n\t\t\t\ttoQuery: '',\n\t\t\t\ttoResults: [],\n\t\t\t\tshowToResults: false,\n\t\t\t\tinit() {\n\t\t\t\t\tconst stored = localStorage.getItem('treni_nearest_station');\n\t\t\t\t\tif (stored) {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst data = JSON.parse(stored);\n\t\t\t\t\t\t\tthis.fromId = data.stationId;\n\t\t\t\t\t\t\tthis.fromName = data.stationName;\n\t\t\t\t\t\t\tthis.fromQuery = data.stationName;\n\t\t\t\t\t\t} catch (e) {}\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\tasync searchFrom() {\n\t\t\t\t\tif (this.fromQuery.length < 2) {\n\t\t\t\t\t\tthis.fromResults = [];\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tconst resp = await fetch('/api/v1/stations/search/live?q=' + encodeURIComponent(this.fromQuery));\n\t\t\t\t\tif (resp.ok) {\n\t\t\t\t\t\tthis.fromResults = await resp.json();\n\t\t\t\t\t\tthis.showFromResults = true;\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\tselectFrom(station) {\n\t\t\t\t\tthis.fromId = station.id;\n\t\t\t\t\tthis.fromName = station.name;\n\t\t\t\t\tthis.fromQuery = station.name;\n\t\t\t\t\tthis.showFromResults = false;\n\t\t\t\t},\n\t\t\t\tasync searchTo() {\n\t\t\t\t\tif (this.toQuery.length < 2) {\n\t\t\t\t\t\tthis.toResults = [];\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tconst resp = await fetch('/api/v1/stations/search/live?q=' + encodeURIComponent(this.toQuery));\n\t\t\t\t\tif (resp.ok) {\n\t\t\t\t\t\tthis.toResults = await resp.json();\n\t\t\t\t\t\tthis.showToResults = true;\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\tselectTo(station) {\n\t\t\t\t\tthis.toId = station.id;\n\t\t\t\t\tthis.toName = station.name;\n\t\t\t\t\tthis.toQuery = station.name;\n\t\t\t\t\tthis.showToResults = false;\n\t\t\t\t}\n\t\t\t}\"><h2>Cerca Itinerario</h2><div class=\"input-row\"><div style=\"flex: 1; position: relative;\"><input type=\"text\" class=\"form-input\" placeholder=\"Da...\" x-model=\"fromQuery\" @input.debounce.300ms=\"searchFrom()\" @focus=\"showFromResults = fromResults.length > 0\"><div x-show=\"showFromResults && fromResults.length > 0\" @click.outside=\"showFromResults = false\" class=\"autocomplete-dropdown\"><template x-for=\"station in fromResults\" :key=\"station.id\"><div class=\"autocomplete-item\" @click=\"selectFrom(station)\" x-text=\"station.name\"></div></template></div></div><div style=\"flex: 1; position: relative;\"><input type=\"text\" class=\"form-input\" placeholder=\"A...\" x-model=\"toQuery\" @input.debounce.300ms=\"searchTo()\" @focus=\"showToResults = toResults.length > 0\" @keyup.enter=\"if (toId && fromId) $refs.itineraryBtn.click()\"><div x-show=\"showToResults && toResults.length > 0\" @click.outside=\"showToResults = false\" class=\"autocomplete-dropdown\"><template x-for=\"station in toResults\" :key=\"station.id\"><div class=\"autocomplete-item\" @click=\"selectTo(station)\" x-text=\"station.name\"></div></template></div></div><button class=\"btn\" x-ref=\"itineraryBtn\" :disabled=\"!fromId || !toId\" hx-get=\"/api/itinerary/search\" hx-trigger=\"click\" hx-target=\"#itinerary-results\" hx-indicator=\"#itinerary-loading\" :hx-vals=\"JSON.stringify({from: fromId, to: toId})\">Cerca</button></div><div id=\"itinerary-loading\" class=\"loading htmx-indicator\"><div class=\"spinner\"></div><span>Ricerca itinerari</span></div><div id=\"itinerary-results\" class=\"mt-2\"></div></section><section class=\"section\"><h2>Stazioni Preferite</h2><div id=\"favorites-list\" hx-get=\"/api/stations/favorites\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><div class=\"loading\"><div class=\"spinner\"></div><span>Caricamento</span></div></div></section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -100,7 +100,7 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 99, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 227, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -113,7 +113,7 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 99, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 227, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -126,7 +126,7 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 				var templ_7745c5c3_Var6 templ.SafeURL
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/departures?station=" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 101, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 229, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -139,7 +139,7 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("/api/stations/favorites")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 104, Col: 43}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 232, Col: 43}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -152,7 +152,7 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(`{"id":"` + s.ID + `","name":"` + s.Name + `"}`)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 105, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 233, Col: 65}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -211,7 +211,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("fav-" + s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 132, Col: 27}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 260, Col: 27}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -224,7 +224,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 133, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 261, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -237,7 +237,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 133, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 261, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -250,7 +250,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var13 templ.SafeURL
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/departures?station=" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 135, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 263, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -263,7 +263,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var14 templ.SafeURL
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/arrivals?station=" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 136, Col: 59}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 264, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -276,7 +276,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("/api/stations/favorites/" + s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 139, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 267, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -289,7 +289,7 @@ func FavoriteStations(stations []StationView) templ.Component {
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs("#fav-" + s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 140, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 268, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {

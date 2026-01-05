@@ -65,6 +65,134 @@ templ Home() {
 				</div>
 			</section>
 		</div>
+		<section
+			class="section"
+			x-data="{
+				fromId: '',
+				fromName: '',
+				fromQuery: '',
+				fromResults: [],
+				showFromResults: false,
+				toId: '',
+				toName: '',
+				toQuery: '',
+				toResults: [],
+				showToResults: false,
+				init() {
+					const stored = localStorage.getItem('treni_nearest_station');
+					if (stored) {
+						try {
+							const data = JSON.parse(stored);
+							this.fromId = data.stationId;
+							this.fromName = data.stationName;
+							this.fromQuery = data.stationName;
+						} catch (e) {}
+					}
+				},
+				async searchFrom() {
+					if (this.fromQuery.length < 2) {
+						this.fromResults = [];
+						return;
+					}
+					const resp = await fetch('/api/v1/stations/search/live?q=' + encodeURIComponent(this.fromQuery));
+					if (resp.ok) {
+						this.fromResults = await resp.json();
+						this.showFromResults = true;
+					}
+				},
+				selectFrom(station) {
+					this.fromId = station.id;
+					this.fromName = station.name;
+					this.fromQuery = station.name;
+					this.showFromResults = false;
+				},
+				async searchTo() {
+					if (this.toQuery.length < 2) {
+						this.toResults = [];
+						return;
+					}
+					const resp = await fetch('/api/v1/stations/search/live?q=' + encodeURIComponent(this.toQuery));
+					if (resp.ok) {
+						this.toResults = await resp.json();
+						this.showToResults = true;
+					}
+				},
+				selectTo(station) {
+					this.toId = station.id;
+					this.toName = station.name;
+					this.toQuery = station.name;
+					this.showToResults = false;
+				}
+			}"
+		>
+			<h2>Cerca Itinerario</h2>
+			<div class="input-row">
+				<div style="flex: 1; position: relative;">
+					<input
+						type="text"
+						class="form-input"
+						placeholder="Da..."
+						x-model="fromQuery"
+						@input.debounce.300ms="searchFrom()"
+						@focus="showFromResults = fromResults.length > 0"
+					/>
+					<div
+						x-show="showFromResults && fromResults.length > 0"
+						@click.outside="showFromResults = false"
+						class="autocomplete-dropdown"
+					>
+						<template x-for="station in fromResults" :key="station.id">
+							<div
+								class="autocomplete-item"
+								@click="selectFrom(station)"
+								x-text="station.name"
+							></div>
+						</template>
+					</div>
+				</div>
+				<div style="flex: 1; position: relative;">
+					<input
+						type="text"
+						class="form-input"
+						placeholder="A..."
+						x-model="toQuery"
+						@input.debounce.300ms="searchTo()"
+						@focus="showToResults = toResults.length > 0"
+						@keyup.enter="if (toId && fromId) $refs.itineraryBtn.click()"
+					/>
+					<div
+						x-show="showToResults && toResults.length > 0"
+						@click.outside="showToResults = false"
+						class="autocomplete-dropdown"
+					>
+						<template x-for="station in toResults" :key="station.id">
+							<div
+								class="autocomplete-item"
+								@click="selectTo(station)"
+								x-text="station.name"
+							></div>
+						</template>
+					</div>
+				</div>
+				<button
+					class="btn"
+					x-ref="itineraryBtn"
+					:disabled="!fromId || !toId"
+					hx-get="/api/itinerary/search"
+					hx-trigger="click"
+					hx-target="#itinerary-results"
+					hx-indicator="#itinerary-loading"
+					:hx-vals="JSON.stringify({from: fromId, to: toId})"
+				>
+					Cerca
+				</button>
+			</div>
+			<div id="itinerary-loading" class="loading htmx-indicator">
+				<div class="spinner"></div>
+				<span>Ricerca itinerari</span>
+			</div>
+			<div id="itinerary-results" class="mt-2"></div>
+		</section>
 		<section class="section">
 			<h2>Stazioni Preferite</h2>
 			<div

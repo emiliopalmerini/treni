@@ -1,0 +1,102 @@
+package views
+
+import (
+	"fmt"
+	"time"
+)
+
+type LegView struct {
+	TrainNumber string
+	TrainType   string
+	FromName    string
+	ToName      string
+	DepartureAt time.Time
+	ArrivalAt   time.Time
+	Platform    string
+	Delay       int
+}
+
+type SolutionView struct {
+	Legs        []LegView
+	DepartureAt time.Time
+	ArrivalAt   time.Time
+	Duration    time.Duration
+	Changes     int
+}
+
+templ ItineraryResults(solutions []SolutionView) {
+	if len(solutions) == 0 {
+		<p class="empty">Nessun itinerario trovato</p>
+	} else {
+		<div class="itinerary-list">
+			for _, sol := range solutions {
+				@SolutionCard(sol)
+			}
+		</div>
+	}
+}
+
+templ SolutionCard(sol SolutionView) {
+	<div class="solution-card">
+		<div class="solution-header">
+			<div class="solution-times">
+				<span class="time-departure">{ sol.DepartureAt.Format("15:04") }</span>
+				<span class="time-arrow">→</span>
+				<span class="time-arrival">{ sol.ArrivalAt.Format("15:04") }</span>
+			</div>
+			<div class="solution-info">
+				<span class="duration">{ formatDuration(sol.Duration) }</span>
+				if sol.Changes > 0 {
+					<span class="changes">{ fmt.Sprintf("%d cambio", sol.Changes) }</span>
+				} else {
+					<span class="changes direct">Diretto</span>
+				}
+			</div>
+		</div>
+		<div class="solution-legs">
+			for i, leg := range sol.Legs {
+				@LegDetail(leg, i > 0)
+			}
+		</div>
+	</div>
+}
+
+templ LegDetail(leg LegView, showConnection bool) {
+	if showConnection {
+		<div class="leg-connection">
+			<span class="connection-icon">⇅</span>
+			<span class="connection-text">Cambio a { leg.FromName }</span>
+		</div>
+	}
+	<div class="leg-detail">
+		<div class="leg-train">
+			<span class="train-type">{ leg.TrainType }</span>
+			<span class="train-number">{ leg.TrainNumber }</span>
+			if leg.Delay > 0 {
+				<span class="delay">+{ fmt.Sprintf("%d", leg.Delay) }</span>
+			}
+		</div>
+		<div class="leg-route">
+			<div class="leg-stop">
+				<span class="stop-time">{ leg.DepartureAt.Format("15:04") }</span>
+				<span class="stop-name">{ leg.FromName }</span>
+				if leg.Platform != "" {
+					<span class="stop-platform">Bin. { leg.Platform }</span>
+				}
+			</div>
+			<div class="leg-stop">
+				<span class="stop-time">{ leg.ArrivalAt.Format("15:04") }</span>
+				<span class="stop-name">{ leg.ToName }</span>
+			</div>
+		</div>
+	</div>
+}
+
+func formatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
+}
