@@ -4,6 +4,7 @@ import "github.com/emiliopalmerini/treni/internal/viaggiatreno"
 
 templ Home() {
 	@Layout("Dashboard") {
+		@silentGeolocationScript()
 		<div class="grid-2">
 			<section class="section" x-data="{ query: '' }">
 				<h2>Cerca Stazione</h2>
@@ -152,4 +153,43 @@ templ FavoriteStations(stations []StationView) {
 type StationView struct {
 	ID   string
 	Name string
+}
+
+templ silentGeolocationScript() {
+	<script>
+		(function() {
+			var STORAGE_KEY = 'treni_nearest_station';
+			if (!navigator.geolocation) return;
+
+			navigator.geolocation.getCurrentPosition(function(pos) {
+				var lat = pos.coords.latitude;
+				var lon = pos.coords.longitude;
+				var stored = null;
+				var url = '/api/stations/nearest?lat=' + lat + '&lon=' + lon;
+
+				try {
+					stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+					if (stored && stored.stationId && stored.lat && stored.lon) {
+						url += '&prevLat=' + stored.lat + '&prevLon=' + stored.lon;
+						url += '&prevStationId=' + encodeURIComponent(stored.stationId);
+						url += '&prevStationName=' + encodeURIComponent(stored.stationName || '');
+					}
+				} catch (e) {}
+
+				fetch(url)
+					.then(function(r) { return r.json(); })
+					.then(function(data) {
+						if (data.id) {
+							localStorage.setItem(STORAGE_KEY, JSON.stringify({
+								stationId: data.id,
+								stationName: data.name,
+								lat: lat,
+								lon: lon
+							}));
+						}
+					})
+					.catch(function() {});
+			}, function() {});
+		})();
+	</script>
 }
