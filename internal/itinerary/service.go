@@ -75,7 +75,7 @@ func (s *Service) FindSolutions(ctx context.Context, fromID, toID string) ([]Sol
 func (s *Service) findSolutionsForDeparture(ctx context.Context, dep viaggiatreno.Departure, fromID, toID string) []Solution {
 	trainNum := strconv.Itoa(dep.TrainNumber)
 
-	status, err := s.vt.AndamentoTreno(ctx, fromID, trainNum, dep.DepartureTime)
+	status, err := s.vt.AndamentoTreno(ctx, dep.OriginID, trainNum, dep.DepartureTime)
 	if err != nil || status == nil {
 		return nil
 	}
