@@ -1,8 +1,40 @@
--- name: CreateObservation :exec
+-- name: UpsertObservation :one
 INSERT INTO train_observation (id, observed_at, station_id, station_name, observation_type,
     train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-    scheduled_time, delay, platform, circulation_state)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    scheduled_time, scheduled_date, delay, platform, circulation_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(train_number, station_id, observation_type, scheduled_date) DO UPDATE SET
+    observed_at = excluded.observed_at,
+    train_category = excluded.train_category,
+    origin_id = excluded.origin_id,
+    origin_name = excluded.origin_name,
+    destination_id = excluded.destination_id,
+    destination_name = excluded.destination_name,
+    delay = excluded.delay,
+    platform = excluded.platform,
+    circulation_state = excluded.circulation_state
+RETURNING id, delay;
+
+-- name: GetObservationByKey :one
+SELECT id, delay FROM train_observation
+WHERE train_number = ? AND station_id = ? AND observation_type = ? AND scheduled_date = ?;
+
+-- name: CreateDelayVariation :exec
+INSERT INTO delay_variation (id, observation_id, recorded_at, delay)
+VALUES (?, ?, ?, ?);
+
+-- name: GetDelayVariationsByObservation :many
+SELECT id, observation_id, recorded_at, delay
+FROM delay_variation
+WHERE observation_id = ?
+ORDER BY recorded_at ASC;
+
+-- name: GetLatestDelayVariation :one
+SELECT id, observation_id, recorded_at, delay
+FROM delay_variation
+WHERE observation_id = ?
+ORDER BY recorded_at DESC
+LIMIT 1;
 
 -- name: GetGlobalStats :one
 SELECT
@@ -38,7 +70,9 @@ GROUP BY station_id;
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -46,13 +80,15 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE train_number = ?
-GROUP BY train_number;
+GROUP BY train_number, origin_id, destination_id;
 
 -- name: GetWorstTrains :many
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -60,7 +96,7 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE circulation_state != 1
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 HAVING observation_count >= 3
 ORDER BY average_delay DESC
 LIMIT ?;

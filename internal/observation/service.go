@@ -35,7 +35,9 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 			ObservationType:  ObservationTypeDeparture,
 			TrainNumber:      d.TrainNumber,
 			TrainCategory:    d.CategoryDesc,
+			OriginID:         d.OriginID,
 			OriginName:       d.Origin,
+			DestinationID:    d.DestinationID,
 			DestinationName:  d.Destination,
 			ScheduledTime:    time.UnixMilli(d.DepartureTime),
 			Delay:            d.Delay,
@@ -45,7 +47,7 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 		entities = append(entities, entity)
 	}
 
-	if err := s.repo.CreateBatch(ctx, entities); err != nil {
+	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
 		log.Printf("failed to record departures: %v", err)
 	}
 }
@@ -67,7 +69,9 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 			ObservationType:  ObservationTypeArrival,
 			TrainNumber:      a.TrainNumber,
 			TrainCategory:    a.CategoryDesc,
+			OriginID:         a.OriginID,
 			OriginName:       a.Origin,
+			DestinationID:    a.DestinationID,
 			DestinationName:  a.Destination,
 			ScheduledTime:    time.UnixMilli(a.ArrivalTime),
 			Delay:            a.Delay,
@@ -77,7 +81,7 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 		entities = append(entities, entity)
 	}
 
-	if err := s.repo.CreateBatch(ctx, entities); err != nil {
+	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
 		log.Printf("failed to record arrivals: %v", err)
 	}
 }
@@ -112,4 +116,8 @@ func (s *Service) GetRecentObservations(ctx context.Context, limit int) ([]*Trai
 
 func (s *Service) GetRecentByStation(ctx context.Context, stationID string, limit int) ([]*TrainObservation, error) {
 	return s.repo.GetRecentByStation(ctx, stationID, limit)
+}
+
+func (s *Service) GetDelayVariations(ctx context.Context, observationID string) ([]*DelayVariation, error) {
+	return s.repo.GetDelayVariations(ctx, observationID)
 }

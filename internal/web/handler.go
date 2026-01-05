@@ -247,8 +247,16 @@ func (h *Handler) GetStationTrains(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stationName := h.getStationName(r, stationID)
-	go h.observationService.RecordDepartures(context.Background(), stationID, stationName, departures)
-	go h.observationService.RecordArrivals(context.Background(), stationID, stationName, arrivals)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		h.observationService.RecordDepartures(ctx, stationID, stationName, departures)
+	}()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		h.observationService.RecordArrivals(ctx, stationID, stationName, arrivals)
+	}()
 
 	trains := mergeTrains(departures, arrivals)
 	views.StationTable(trains).Render(r.Context(), w)

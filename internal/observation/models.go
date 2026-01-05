@@ -49,7 +49,9 @@ type CategoryStats struct {
 type TrainStats struct {
 	TrainNumber      int     `json:"trainNumber"`
 	Category         string  `json:"category"`
+	OriginID         string  `json:"originId"`
 	OriginName       string  `json:"originName"`
+	DestinationID    string  `json:"destinationId"`
 	DestinationName  string  `json:"destinationName"`
 	ObservationCount int     `json:"observationCount"`
 	AverageDelay     float64 `json:"averageDelay"`
@@ -63,4 +65,11 @@ type StationStats struct {
 	ObservationCount int     `json:"observationCount"`
 	AverageDelay     float64 `json:"averageDelay"`
 	OnTimePercentage float64 `json:"onTimePercentage"`
+}
+
+type DelayVariation struct {
+	ID            uuid.UUID `json:"id"`
+	ObservationID uuid.UUID `json:"observationId"`
+	RecordedAt    time.Time `json:"recordedAt"`
+	Delay         int       `json:"delay"`
 }

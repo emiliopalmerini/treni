@@ -10,50 +10,61 @@ import (
 	"time"
 )
 
-const createObservation = `-- name: CreateObservation :exec
-INSERT INTO train_observation (id, observed_at, station_id, station_name, observation_type,
-    train_number, train_category, origin_id, origin_name, destination_id, destination_name,
-    scheduled_time, delay, platform, circulation_state)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+const createDelayVariation = `-- name: CreateDelayVariation :exec
+INSERT INTO delay_variation (id, observation_id, recorded_at, delay)
+VALUES (?, ?, ?, ?)
 `
 
-type CreateObservationParams struct {
-	ID               string     `json:"id"`
-	ObservedAt       time.Time  `json:"observed_at"`
-	StationID        string     `json:"station_id"`
-	StationName      string     `json:"station_name"`
-	ObservationType  string     `json:"observation_type"`
-	TrainNumber      int64      `json:"train_number"`
-	TrainCategory    *string    `json:"train_category"`
-	OriginID         *string    `json:"origin_id"`
-	OriginName       *string    `json:"origin_name"`
-	DestinationID    *string    `json:"destination_id"`
-	DestinationName  *string    `json:"destination_name"`
-	ScheduledTime    *time.Time `json:"scheduled_time"`
-	Delay            *int64     `json:"delay"`
-	Platform         *string    `json:"platform"`
-	CirculationState *int64     `json:"circulation_state"`
+type CreateDelayVariationParams struct {
+	ID            string    `json:"id"`
+	ObservationID string    `json:"observation_id"`
+	RecordedAt    time.Time `json:"recorded_at"`
+	Delay         int64     `json:"delay"`
 }
 
-func (q *Queries) CreateObservation(ctx context.Context, arg CreateObservationParams) error {
-	_, err := q.db.ExecContext(ctx, createObservation,
+func (q *Queries) CreateDelayVariation(ctx context.Context, arg CreateDelayVariationParams) error {
+	_, err := q.db.ExecContext(ctx, createDelayVariation,
 		arg.ID,
-		arg.ObservedAt,
-		arg.StationID,
-		arg.StationName,
-		arg.ObservationType,
-		arg.TrainNumber,
-		arg.TrainCategory,
-		arg.OriginID,
-		arg.OriginName,
-		arg.DestinationID,
-		arg.DestinationName,
-		arg.ScheduledTime,
+		arg.ObservationID,
+		arg.RecordedAt,
 		arg.Delay,
-		arg.Platform,
-		arg.CirculationState,
 	)
 	return err
+}
+
+const getDelayVariationsByObservation = `-- name: GetDelayVariationsByObservation :many
+SELECT id, observation_id, recorded_at, delay
+FROM delay_variation
+WHERE observation_id = ?
+ORDER BY recorded_at ASC
+`
+
+func (q *Queries) GetDelayVariationsByObservation(ctx context.Context, observationID string) ([]DelayVariation, error) {
+	rows, err := q.db.QueryContext(ctx, getDelayVariationsByObservation, observationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DelayVariation{}
+	for rows.Next() {
+		var i DelayVariation
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObservationID,
+			&i.RecordedAt,
+			&i.Delay,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGlobalStats = `-- name: GetGlobalStats :one
@@ -84,6 +95,55 @@ func (q *Queries) GetGlobalStats(ctx context.Context) (GetGlobalStatsRow, error)
 	return i, err
 }
 
+const getLatestDelayVariation = `-- name: GetLatestDelayVariation :one
+SELECT id, observation_id, recorded_at, delay
+FROM delay_variation
+WHERE observation_id = ?
+ORDER BY recorded_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestDelayVariation(ctx context.Context, observationID string) (DelayVariation, error) {
+	row := q.db.QueryRowContext(ctx, getLatestDelayVariation, observationID)
+	var i DelayVariation
+	err := row.Scan(
+		&i.ID,
+		&i.ObservationID,
+		&i.RecordedAt,
+		&i.Delay,
+	)
+	return i, err
+}
+
+const getObservationByKey = `-- name: GetObservationByKey :one
+SELECT id, delay FROM train_observation
+WHERE train_number = ? AND station_id = ? AND observation_type = ? AND scheduled_date = ?
+`
+
+type GetObservationByKeyParams struct {
+	TrainNumber     int64   `json:"train_number"`
+	StationID       string  `json:"station_id"`
+	ObservationType string  `json:"observation_type"`
+	ScheduledDate   *string `json:"scheduled_date"`
+}
+
+type GetObservationByKeyRow struct {
+	ID    string `json:"id"`
+	Delay *int64 `json:"delay"`
+}
+
+func (q *Queries) GetObservationByKey(ctx context.Context, arg GetObservationByKeyParams) (GetObservationByKeyRow, error) {
+	row := q.db.QueryRowContext(ctx, getObservationByKey,
+		arg.TrainNumber,
+		arg.StationID,
+		arg.ObservationType,
+		arg.ScheduledDate,
+	)
+	var i GetObservationByKeyRow
+	err := row.Scan(&i.ID, &i.Delay)
+	return i, err
+}
+
 const getRecentObservations = `-- name: GetRecentObservations :many
 SELECT id, observed_at, station_id, station_name, observation_type,
     train_number, train_category, origin_id, origin_name, destination_id, destination_name,
@@ -93,15 +153,33 @@ ORDER BY observed_at DESC
 LIMIT ?
 `
 
-func (q *Queries) GetRecentObservations(ctx context.Context, limit int64) ([]TrainObservation, error) {
+type GetRecentObservationsRow struct {
+	ID               string     `json:"id"`
+	ObservedAt       time.Time  `json:"observed_at"`
+	StationID        string     `json:"station_id"`
+	StationName      string     `json:"station_name"`
+	ObservationType  string     `json:"observation_type"`
+	TrainNumber      int64      `json:"train_number"`
+	TrainCategory    *string    `json:"train_category"`
+	OriginID         *string    `json:"origin_id"`
+	OriginName       *string    `json:"origin_name"`
+	DestinationID    *string    `json:"destination_id"`
+	DestinationName  *string    `json:"destination_name"`
+	ScheduledTime    *time.Time `json:"scheduled_time"`
+	Delay            *int64     `json:"delay"`
+	Platform         *string    `json:"platform"`
+	CirculationState *int64     `json:"circulation_state"`
+}
+
+func (q *Queries) GetRecentObservations(ctx context.Context, limit int64) ([]GetRecentObservationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getRecentObservations, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TrainObservation{}
+	items := []GetRecentObservationsRow{}
 	for rows.Next() {
-		var i TrainObservation
+		var i GetRecentObservationsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ObservedAt,
@@ -147,15 +225,33 @@ type GetRecentObservationsByStationParams struct {
 	Limit     int64  `json:"limit"`
 }
 
-func (q *Queries) GetRecentObservationsByStation(ctx context.Context, arg GetRecentObservationsByStationParams) ([]TrainObservation, error) {
+type GetRecentObservationsByStationRow struct {
+	ID               string     `json:"id"`
+	ObservedAt       time.Time  `json:"observed_at"`
+	StationID        string     `json:"station_id"`
+	StationName      string     `json:"station_name"`
+	ObservationType  string     `json:"observation_type"`
+	TrainNumber      int64      `json:"train_number"`
+	TrainCategory    *string    `json:"train_category"`
+	OriginID         *string    `json:"origin_id"`
+	OriginName       *string    `json:"origin_name"`
+	DestinationID    *string    `json:"destination_id"`
+	DestinationName  *string    `json:"destination_name"`
+	ScheduledTime    *time.Time `json:"scheduled_time"`
+	Delay            *int64     `json:"delay"`
+	Platform         *string    `json:"platform"`
+	CirculationState *int64     `json:"circulation_state"`
+}
+
+func (q *Queries) GetRecentObservationsByStation(ctx context.Context, arg GetRecentObservationsByStationParams) ([]GetRecentObservationsByStationRow, error) {
 	rows, err := q.db.QueryContext(ctx, getRecentObservationsByStation, arg.StationID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TrainObservation{}
+	items := []GetRecentObservationsByStationRow{}
 	for rows.Next() {
-		var i TrainObservation
+		var i GetRecentObservationsByStationRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ObservedAt,
@@ -270,7 +366,9 @@ const getStatsByTrain = `-- name: GetStatsByTrain :one
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -278,13 +376,15 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE train_number = ?
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 `
 
 type GetStatsByTrainRow struct {
 	TrainNumber      int64       `json:"train_number"`
 	Category         *string     `json:"category"`
+	OriginID         *string     `json:"origin_id"`
 	OriginName       *string     `json:"origin_name"`
+	DestinationID    *string     `json:"destination_id"`
 	DestinationName  *string     `json:"destination_name"`
 	ObservationCount int64       `json:"observation_count"`
 	AverageDelay     interface{} `json:"average_delay"`
@@ -298,7 +398,9 @@ func (q *Queries) GetStatsByTrain(ctx context.Context, trainNumber int64) (GetSt
 	err := row.Scan(
 		&i.TrainNumber,
 		&i.Category,
+		&i.OriginID,
 		&i.OriginName,
+		&i.DestinationID,
 		&i.DestinationName,
 		&i.ObservationCount,
 		&i.AverageDelay,
@@ -364,7 +466,9 @@ const getWorstTrains = `-- name: GetWorstTrains :many
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -372,7 +476,7 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE circulation_state != 1
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 HAVING observation_count >= 3
 ORDER BY average_delay DESC
 LIMIT ?
@@ -381,7 +485,9 @@ LIMIT ?
 type GetWorstTrainsRow struct {
 	TrainNumber      int64       `json:"train_number"`
 	Category         *string     `json:"category"`
+	OriginID         *string     `json:"origin_id"`
 	OriginName       *string     `json:"origin_name"`
+	DestinationID    *string     `json:"destination_id"`
 	DestinationName  *string     `json:"destination_name"`
 	ObservationCount int64       `json:"observation_count"`
 	AverageDelay     interface{} `json:"average_delay"`
@@ -401,7 +507,9 @@ func (q *Queries) GetWorstTrains(ctx context.Context, limit int64) ([]GetWorstTr
 		if err := rows.Scan(
 			&i.TrainNumber,
 			&i.Category,
+			&i.OriginID,
 			&i.OriginName,
+			&i.DestinationID,
 			&i.DestinationName,
 			&i.ObservationCount,
 			&i.AverageDelay,
@@ -419,4 +527,70 @@ func (q *Queries) GetWorstTrains(ctx context.Context, limit int64) ([]GetWorstTr
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertObservation = `-- name: UpsertObservation :one
+INSERT INTO train_observation (id, observed_at, station_id, station_name, observation_type,
+    train_number, train_category, origin_id, origin_name, destination_id, destination_name,
+    scheduled_time, scheduled_date, delay, platform, circulation_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(train_number, station_id, observation_type, scheduled_date) DO UPDATE SET
+    observed_at = excluded.observed_at,
+    train_category = excluded.train_category,
+    origin_id = excluded.origin_id,
+    origin_name = excluded.origin_name,
+    destination_id = excluded.destination_id,
+    destination_name = excluded.destination_name,
+    delay = excluded.delay,
+    platform = excluded.platform,
+    circulation_state = excluded.circulation_state
+RETURNING id, delay
+`
+
+type UpsertObservationParams struct {
+	ID               string     `json:"id"`
+	ObservedAt       time.Time  `json:"observed_at"`
+	StationID        string     `json:"station_id"`
+	StationName      string     `json:"station_name"`
+	ObservationType  string     `json:"observation_type"`
+	TrainNumber      int64      `json:"train_number"`
+	TrainCategory    *string    `json:"train_category"`
+	OriginID         *string    `json:"origin_id"`
+	OriginName       *string    `json:"origin_name"`
+	DestinationID    *string    `json:"destination_id"`
+	DestinationName  *string    `json:"destination_name"`
+	ScheduledTime    *time.Time `json:"scheduled_time"`
+	ScheduledDate    *string    `json:"scheduled_date"`
+	Delay            *int64     `json:"delay"`
+	Platform         *string    `json:"platform"`
+	CirculationState *int64     `json:"circulation_state"`
+}
+
+type UpsertObservationRow struct {
+	ID    string `json:"id"`
+	Delay *int64 `json:"delay"`
+}
+
+func (q *Queries) UpsertObservation(ctx context.Context, arg UpsertObservationParams) (UpsertObservationRow, error) {
+	row := q.db.QueryRowContext(ctx, upsertObservation,
+		arg.ID,
+		arg.ObservedAt,
+		arg.StationID,
+		arg.StationName,
+		arg.ObservationType,
+		arg.TrainNumber,
+		arg.TrainCategory,
+		arg.OriginID,
+		arg.OriginName,
+		arg.DestinationID,
+		arg.DestinationName,
+		arg.ScheduledTime,
+		arg.ScheduledDate,
+		arg.Delay,
+		arg.Platform,
+		arg.CirculationState,
+	)
+	var i UpsertObservationRow
+	err := row.Scan(&i.ID, &i.Delay)
+	return i, err
 }

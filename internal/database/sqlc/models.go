@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+type DelayVariation struct {
+	ID            string    `json:"id"`
+	ObservationID string    `json:"observation_id"`
+	RecordedAt    time.Time `json:"recorded_at"`
+	Delay         int64     `json:"delay"`
+}
+
 type Journey struct {
 	ID                 string     `json:"id"`
 	TrainNumber        int64      `json:"train_number"`
@@ -74,6 +81,7 @@ type TrainObservation struct {
 	Delay            *int64     `json:"delay"`
 	Platform         *string    `json:"platform"`
 	CirculationState *int64     `json:"circulation_state"`
+	ScheduledDate    *string    `json:"scheduled_date"`
 }
 
 type WatchedTrain struct {
