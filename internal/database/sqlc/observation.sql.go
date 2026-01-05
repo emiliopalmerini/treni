@@ -270,7 +270,9 @@ const getStatsByTrain = `-- name: GetStatsByTrain :one
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -278,13 +280,15 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE train_number = ?
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 `
 
 type GetStatsByTrainRow struct {
 	TrainNumber      int64       `json:"train_number"`
 	Category         *string     `json:"category"`
+	OriginID         *string     `json:"origin_id"`
 	OriginName       *string     `json:"origin_name"`
+	DestinationID    *string     `json:"destination_id"`
 	DestinationName  *string     `json:"destination_name"`
 	ObservationCount int64       `json:"observation_count"`
 	AverageDelay     interface{} `json:"average_delay"`
@@ -298,7 +302,9 @@ func (q *Queries) GetStatsByTrain(ctx context.Context, trainNumber int64) (GetSt
 	err := row.Scan(
 		&i.TrainNumber,
 		&i.Category,
+		&i.OriginID,
 		&i.OriginName,
+		&i.DestinationID,
 		&i.DestinationName,
 		&i.ObservationCount,
 		&i.AverageDelay,
@@ -364,7 +370,9 @@ const getWorstTrains = `-- name: GetWorstTrains :many
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -372,7 +380,7 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE circulation_state != 1
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 HAVING observation_count >= 3
 ORDER BY average_delay DESC
 LIMIT ?
@@ -381,7 +389,9 @@ LIMIT ?
 type GetWorstTrainsRow struct {
 	TrainNumber      int64       `json:"train_number"`
 	Category         *string     `json:"category"`
+	OriginID         *string     `json:"origin_id"`
 	OriginName       *string     `json:"origin_name"`
+	DestinationID    *string     `json:"destination_id"`
 	DestinationName  *string     `json:"destination_name"`
 	ObservationCount int64       `json:"observation_count"`
 	AverageDelay     interface{} `json:"average_delay"`
@@ -401,7 +411,9 @@ func (q *Queries) GetWorstTrains(ctx context.Context, limit int64) ([]GetWorstTr
 		if err := rows.Scan(
 			&i.TrainNumber,
 			&i.Category,
+			&i.OriginID,
 			&i.OriginName,
+			&i.DestinationID,
 			&i.DestinationName,
 			&i.ObservationCount,
 			&i.AverageDelay,
