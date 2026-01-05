@@ -5,8 +5,7 @@ import (
 )
 
 type ObservationRepository interface {
-	Create(ctx context.Context, entity *TrainObservation) error
-	CreateBatch(ctx context.Context, entities []*TrainObservation) error
+	UpsertBatch(ctx context.Context, entities []*TrainObservation) error
 
 	GetGlobalStats(ctx context.Context) (*GlobalStats, error)
 	GetStatsByCategory(ctx context.Context) ([]*CategoryStats, error)
@@ -18,4 +17,6 @@ type ObservationRepository interface {
 
 	GetRecentObservations(ctx context.Context, limit int) ([]*TrainObservation, error)
 	GetRecentByStation(ctx context.Context, stationID string, limit int) ([]*TrainObservation, error)
+
+	GetDelayVariations(ctx context.Context, observationID string) ([]*DelayVariation, error)
 }

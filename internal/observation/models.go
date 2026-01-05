@@ -66,3 +66,10 @@ type StationStats struct {
 	AverageDelay     float64 `json:"averageDelay"`
 	OnTimePercentage float64 `json:"onTimePercentage"`
 }
+
+type DelayVariation struct {
+	ID            uuid.UUID `json:"id"`
+	ObservationID uuid.UUID `json:"observationId"`
+	RecordedAt    time.Time `json:"recordedAt"`
+	Delay         int       `json:"delay"`
+}

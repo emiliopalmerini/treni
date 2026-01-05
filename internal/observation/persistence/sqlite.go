@@ -20,11 +20,7 @@ func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
 	return &SQLiteRepository{db: db, q: sqlc.New(db)}
 }
 
-func (r *SQLiteRepository) Create(ctx context.Context, entity *observation.TrainObservation) error {
-	return r.q.CreateObservation(ctx, observationToParams(entity))
-}
-
-func (r *SQLiteRepository) CreateBatch(ctx context.Context, entities []*observation.TrainObservation) error {
+func (r *SQLiteRepository) UpsertBatch(ctx context.Context, entities []*observation.TrainObservation) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -32,9 +28,44 @@ func (r *SQLiteRepository) CreateBatch(ctx context.Context, entities []*observat
 	defer tx.Rollback()
 
 	q := r.q.WithTx(tx)
+	now := time.Now()
+
 	for _, entity := range entities {
-		if err := q.CreateObservation(ctx, observationToParams(entity)); err != nil {
+		existing, err := q.GetObservationByKey(ctx, sqlc.GetObservationByKeyParams{
+			TrainNumber:     int64(entity.TrainNumber),
+			StationID:       entity.StationID,
+			ObservationType: string(entity.ObservationType),
+			ScheduledDate:   strPtr(entity.ScheduledTime.Format("2006-01-02")),
+		})
+
+		var previousDelay *int64
+		if err == nil {
+			previousDelay = existing.Delay
+		}
+
+		result, err := q.UpsertObservation(ctx, observationToUpsertParams(entity))
+		if err != nil {
 			return err
+		}
+
+		if previousDelay != nil && *previousDelay != int64(entity.Delay) {
+			if err := q.CreateDelayVariation(ctx, sqlc.CreateDelayVariationParams{
+				ID:            uuid.New().String(),
+				ObservationID: result.ID,
+				RecordedAt:    now,
+				Delay:         int64(entity.Delay),
+			}); err != nil {
+				return err
+			}
+		} else if previousDelay == nil {
+			if err := q.CreateDelayVariation(ctx, sqlc.CreateDelayVariationParams{
+				ID:            uuid.New().String(),
+				ObservationID: result.ID,
+				RecordedAt:    now,
+				Delay:         int64(entity.Delay),
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -168,7 +199,7 @@ func (r *SQLiteRepository) GetRecentObservations(ctx context.Context, limit int)
 	if err != nil {
 		return nil, err
 	}
-	return sqlcObservationsToObservations(rows), nil
+	return recentRowsToObservations(rows), nil
 }
 
 func (r *SQLiteRepository) GetRecentByStation(ctx context.Context, stationID string, limit int) ([]*observation.TrainObservation, error) {
@@ -179,7 +210,27 @@ func (r *SQLiteRepository) GetRecentByStation(ctx context.Context, stationID str
 	if err != nil {
 		return nil, err
 	}
-	return sqlcObservationsToObservations(rows), nil
+	return recentByStationRowsToObservations(rows), nil
+}
+
+func (r *SQLiteRepository) GetDelayVariations(ctx context.Context, observationID string) ([]*observation.DelayVariation, error) {
+	rows, err := r.q.GetDelayVariationsByObservation(ctx, observationID)
+	if err != nil {
+		return nil, err
+	}
+
+	variations := make([]*observation.DelayVariation, len(rows))
+	for i, row := range rows {
+		id, _ := uuid.Parse(row.ID)
+		obsID, _ := uuid.Parse(row.ObservationID)
+		variations[i] = &observation.DelayVariation{
+			ID:            id,
+			ObservationID: obsID,
+			RecordedAt:    row.RecordedAt,
+			Delay:         int(row.Delay),
+		}
+	}
+	return variations, nil
 }
 
 func ptr[T any](v T) *T {
@@ -234,8 +285,8 @@ func toInt(v interface{}) int {
 	}
 }
 
-func observationToParams(entity *observation.TrainObservation) sqlc.CreateObservationParams {
-	return sqlc.CreateObservationParams{
+func observationToUpsertParams(entity *observation.TrainObservation) sqlc.UpsertObservationParams {
+	return sqlc.UpsertObservationParams{
 		ID:               entity.ID.String(),
 		ObservedAt:       entity.ObservedAt,
 		StationID:        entity.StationID,
@@ -248,13 +299,39 @@ func observationToParams(entity *observation.TrainObservation) sqlc.CreateObserv
 		DestinationID:    strPtr(entity.DestinationID),
 		DestinationName:  strPtr(entity.DestinationName),
 		ScheduledTime:    timePtr(entity.ScheduledTime),
+		ScheduledDate:    strPtr(entity.ScheduledTime.Format("2006-01-02")),
 		Delay:            ptr(int64(entity.Delay)),
 		Platform:         strPtr(entity.Platform),
 		CirculationState: ptr(int64(entity.CirculationState)),
 	}
 }
 
-func sqlcObservationsToObservations(rows []sqlc.TrainObservation) []*observation.TrainObservation {
+func recentRowsToObservations(rows []sqlc.GetRecentObservationsRow) []*observation.TrainObservation {
+	observations := make([]*observation.TrainObservation, len(rows))
+	for i, row := range rows {
+		id, _ := uuid.Parse(row.ID)
+		observations[i] = &observation.TrainObservation{
+			ID:               id,
+			ObservedAt:       row.ObservedAt,
+			StationID:        row.StationID,
+			StationName:      row.StationName,
+			ObservationType:  observation.ObservationType(row.ObservationType),
+			TrainNumber:      int(row.TrainNumber),
+			TrainCategory:    deref(row.TrainCategory),
+			OriginID:         deref(row.OriginID),
+			OriginName:       deref(row.OriginName),
+			DestinationID:    deref(row.DestinationID),
+			DestinationName:  deref(row.DestinationName),
+			ScheduledTime:    deref(row.ScheduledTime),
+			Delay:            int(deref(row.Delay)),
+			Platform:         deref(row.Platform),
+			CirculationState: int(deref(row.CirculationState)),
+		}
+	}
+	return observations
+}
+
+func recentByStationRowsToObservations(rows []sqlc.GetRecentObservationsByStationRow) []*observation.TrainObservation {
 	observations := make([]*observation.TrainObservation, len(rows))
 	for i, row := range rows {
 		id, _ := uuid.Parse(row.ID)
