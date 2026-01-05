@@ -198,9 +198,9 @@ func (h *Handler) GetNearestStation(w http.ResponseWriter, r *http.Request) {
 			if dist <= distanceThresholdKm {
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(map[string]string{
-					"id":      prevStationID,
-					"name":    prevStationName,
-					"cached":  "true",
+					"id":     prevStationID,
+					"name":   prevStationName,
+					"cached": "true",
 				})
 				return
 			}
