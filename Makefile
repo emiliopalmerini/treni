@@ -1,9 +1,7 @@
-.PHONY: all fmt vet templ sqlc generate build run test clean migrate-up migrate-down migrate-create
+.PHONY: all fmt vet templ sqlc generate build run test clean
 
 BINARY_NAME=treni
 CMD_PATH=./cmd
-DB_PATH=./treni.db
-MIGRATIONS_PATH=./internal/database/migrations
 
 all: build
 
@@ -33,13 +31,3 @@ test: vet
 clean:
 	go clean
 	rm -f $(BINARY_NAME)
-
-migrate-up:
-	migrate -path $(MIGRATIONS_PATH) -database "sqlite3://$(DB_PATH)" up
-
-migrate-down:
-	migrate -path $(MIGRATIONS_PATH) -database "sqlite3://$(DB_PATH)" down 1
-
-migrate-create:
-	@read -p "Migration name: " name; \
-	migrate create -ext sql -dir $(MIGRATIONS_PATH) -seq $$name
