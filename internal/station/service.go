@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math"
+	"time"
 
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 )
@@ -105,6 +106,7 @@ func (s *Service) ImportAllStations(ctx context.Context, progress chan<- ImportS
 				Region:    rs.Region,
 				Latitude:  rs.Latitude,
 				Longitude: rs.Longitude,
+				UpdatedAt: time.Now(),
 			}
 			if err := s.repo.Upsert(ctx, station); err != nil {
 				log.Printf("failed to upsert station %s: %v", rs.ID, err)

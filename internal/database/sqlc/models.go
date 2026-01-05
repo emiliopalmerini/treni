@@ -15,6 +15,15 @@ type DelayVariation struct {
 	Delay         int64     `json:"delay"`
 }
 
+type ImportMetadatum struct {
+	EntityType       string    `json:"entity_type"`
+	LastImport       time.Time `json:"last_import"`
+	RecordCount      *int64    `json:"record_count"`
+	ImportDurationMs *int64    `json:"import_duration_ms"`
+	Status           *string   `json:"status"`
+	ErrorMessage     *string   `json:"error_message"`
+}
+
 type Journey struct {
 	ID                 string     `json:"id"`
 	TrainNumber        int64      `json:"train_number"`
@@ -48,12 +57,13 @@ type Preferitum struct {
 }
 
 type Station struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Region     *int64   `json:"region"`
-	Latitude   *float64 `json:"latitude"`
-	Longitude  *float64 `json:"longitude"`
-	IsFavorite *int64   `json:"is_favorite"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Region     *int64     `json:"region"`
+	Latitude   *float64   `json:"latitude"`
+	Longitude  *float64   `json:"longitude"`
+	IsFavorite *int64     `json:"is_favorite"`
+	UpdatedAt  *time.Time `json:"updated_at"`
 }
 
 type TrainCheck struct {

@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/station"
@@ -17,12 +18,17 @@ func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
 }
 
 func (r *SQLiteRepository) Create(ctx context.Context, entity *station.Station) error {
+	updatedAt := entity.UpdatedAt
+	if updatedAt.IsZero() {
+		updatedAt = time.Now()
+	}
 	return r.q.CreateStation(ctx, sqlc.CreateStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
 		Region:    ptr(int64(entity.Region)),
 		Latitude:  ptr(entity.Latitude),
 		Longitude: ptr(entity.Longitude),
+		UpdatedAt: ptr(updatedAt),
 	})
 }
 
@@ -64,12 +70,17 @@ func (r *SQLiteRepository) Count(ctx context.Context) (int, error) {
 }
 
 func (r *SQLiteRepository) Update(ctx context.Context, entity *station.Station) error {
+	updatedAt := entity.UpdatedAt
+	if updatedAt.IsZero() {
+		updatedAt = time.Now()
+	}
 	return r.q.UpdateStation(ctx, sqlc.UpdateStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
 		Region:    ptr(int64(entity.Region)),
 		Latitude:  ptr(entity.Latitude),
 		Longitude: ptr(entity.Longitude),
+		UpdatedAt: ptr(updatedAt),
 	})
 }
 
@@ -78,12 +89,17 @@ func (r *SQLiteRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *SQLiteRepository) Upsert(ctx context.Context, entity *station.Station) error {
+	updatedAt := entity.UpdatedAt
+	if updatedAt.IsZero() {
+		updatedAt = time.Now()
+	}
 	return r.q.UpsertStation(ctx, sqlc.UpsertStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
 		Region:    ptr(int64(entity.Region)),
 		Latitude:  ptr(entity.Latitude),
 		Longitude: ptr(entity.Longitude),
+		UpdatedAt: ptr(updatedAt),
 	})
 }
 
@@ -106,6 +122,7 @@ func rowToStation(row sqlc.GetStationByIDRow) *station.Station {
 		Region:    int(deref(row.Region)),
 		Latitude:  deref(row.Latitude),
 		Longitude: deref(row.Longitude),
+		UpdatedAt: deref(row.UpdatedAt),
 	}
 }
 
@@ -118,6 +135,7 @@ func listRowsToStations(rows []sqlc.ListStationsRow) []*station.Station {
 			Region:    int(deref(row.Region)),
 			Latitude:  deref(row.Latitude),
 			Longitude: deref(row.Longitude),
+			UpdatedAt: deref(row.UpdatedAt),
 		}
 	}
 	return stations
@@ -132,6 +150,7 @@ func searchRowsToStations(rows []sqlc.SearchStationsRow) []*station.Station {
 			Region:    int(deref(row.Region)),
 			Latitude:  deref(row.Latitude),
 			Longitude: deref(row.Longitude),
+			UpdatedAt: deref(row.UpdatedAt),
 		}
 	}
 	return stations
@@ -146,6 +165,7 @@ func coordRowsToStations(rows []sqlc.ListStationsWithCoordinatesRow) []*station.
 			Region:    int(deref(row.Region)),
 			Latitude:  deref(row.Latitude),
 			Longitude: deref(row.Longitude),
+			UpdatedAt: deref(row.UpdatedAt),
 		}
 	}
 	return stations
