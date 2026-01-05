@@ -15,7 +15,7 @@ type DepartureView struct {
 	IsCancelled  bool
 }
 
-templ DeparturesPage(stationName string, stationID string, detectLocation bool) {
+templ DeparturesPage(stationName string, stationID string) {
 	@Layout("Partenze · " + stationName) {
 		<section class="section">
 			<div class="section-header">
@@ -51,31 +51,7 @@ templ DeparturesPage(stationName string, stationID string, detectLocation bool) 
 				</div>
 			</div>
 		</section>
-		if detectLocation {
-			@geolocateScript()
-		}
 	}
-}
-
-templ geolocateScript() {
-	<script>
-		(function() {
-			if (!navigator.geolocation) return;
-			navigator.geolocation.getCurrentPosition(
-				function(pos) {
-					fetch('/api/stations/nearest?lat=' + pos.coords.latitude + '&lon=' + pos.coords.longitude)
-						.then(function(r) { return r.json(); })
-						.then(function(data) {
-							if (data.id) {
-								window.location.href = '/departures?station=' + data.id;
-							}
-						})
-						.catch(function() {});
-				},
-				function() {}
-			);
-		})();
-	</script>
 }
 
 templ DeparturesTable(departures []DepartureView) {
@@ -239,4 +215,111 @@ templ DelayBadge(delay int, isCancelled bool) {
 	} else {
 		<span class="badge badge-ok">Orario</span>
 	}
+}
+
+templ StationPicker(pageType string) {
+	@Layout("Seleziona Stazione") {
+		<section class="section">
+			<h1>Seleziona Stazione</h1>
+			<p class="subtitle">{ pageType }</p>
+		</section>
+		<div class="grid-2">
+			<section class="section" x-data="{ query: '' }">
+				<h2>Cerca Stazione</h2>
+				<div class="input-row">
+					<input
+						type="text"
+						class="form-input"
+						placeholder="Nome stazione..."
+						x-model="query"
+						@keyup.enter="$refs.searchBtn.click()"
+					/>
+					<button
+						class="btn"
+						x-ref="searchBtn"
+						hx-get="/api/stations/search"
+						hx-trigger="click"
+						hx-target="#picker-results"
+						hx-indicator="#picker-loading"
+						:hx-vals="JSON.stringify({q: query})"
+					>
+						Cerca
+					</button>
+				</div>
+				<div id="picker-results" class="mt-2">
+					<div id="picker-loading" class="loading htmx-indicator">
+						<div class="spinner"></div>
+						<span>Ricerca</span>
+					</div>
+				</div>
+			</section>
+			<section class="section">
+				<h2>Stazioni Preferite</h2>
+				<div
+					id="picker-favorites"
+					hx-get={ "/api/stations/favorites?pageType=" + pageType }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+				>
+					<div class="loading">
+						<div class="spinner"></div>
+						<span>Caricamento</span>
+					</div>
+				</div>
+			</section>
+		</div>
+		@stationPickerScript(pageType)
+	}
+}
+
+templ stationPickerScript(pageType string) {
+	<script>
+		(function() {
+			var STORAGE_KEY = 'treni_nearest_station';
+			var pageType = '{ pageType }';
+			var stored = null;
+
+			try {
+				stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+				if (stored && stored.stationId) {
+					var targetPage = pageType === 'Arrivi' ? '/arrivals' : '/departures';
+					window.location.href = targetPage + '?station=' + stored.stationId;
+				}
+			} catch (e) {}
+		})();
+	</script>
+}
+
+templ PickerStationResults(stations []StationResult, pageType string) {
+	if len(stations) == 0 {
+		<p class="empty">Nessun risultato</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Stazione</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, s := range stations {
+					<tr>
+						<td class="font-bold">{ s.Name } <span class="text-muted">({ s.ID })</span></td>
+						<td class="actions">
+							if pageType == "Arrivi" {
+								<a href={ templ.SafeURL("/arrivals?station=" + s.ID) } class="btn btn-sm">Seleziona</a>
+							} else {
+								<a href={ templ.SafeURL("/departures?station=" + s.ID) } class="btn btn-sm">Seleziona</a>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+type StationResult struct {
+	ID   string
+	Name string
 }

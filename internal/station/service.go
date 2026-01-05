@@ -139,7 +139,7 @@ func (s *Service) FindNearest(ctx context.Context, lat, lon float64) (*Station, 
 	minDist := math.MaxFloat64
 
 	for _, st := range stations {
-		dist := haversine(lat, lon, st.Latitude, st.Longitude)
+		dist := Haversine(lat, lon, st.Latitude, st.Longitude)
 		if dist < minDist {
 			minDist = dist
 			nearest = st
@@ -149,8 +149,8 @@ func (s *Service) FindNearest(ctx context.Context, lat, lon float64) (*Station, 
 	return nearest, nil
 }
 
-// haversine calculates the distance in km between two coordinates.
-func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+// Haversine calculates the distance in km between two coordinates.
+func Haversine(lat1, lon1, lat2, lon2 float64) float64 {
 	const earthRadius = 6371.0
 
 	lat1Rad := lat1 * math.Pi / 180

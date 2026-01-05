@@ -49,19 +49,20 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeparturesPage(w http.ResponseWriter, r *http.Request) {
 	stationID := r.URL.Query().Get("station")
-	detectLocation := stationID == ""
 	if stationID == "" {
-		stationID = "S01700" // Default to Milano Centrale
+		views.StationPicker("Partenze").Render(r.Context(), w)
+		return
 	}
 
 	stationName := h.getStationName(r, stationID)
-	views.DeparturesPage(stationName, stationID, detectLocation).Render(r.Context(), w)
+	views.DeparturesPage(stationName, stationID).Render(r.Context(), w)
 }
 
 func (h *Handler) ArrivalsPage(w http.ResponseWriter, r *http.Request) {
 	stationID := r.URL.Query().Get("station")
 	if stationID == "" {
-		stationID = "S01700"
+		views.StationPicker("Arrivi").Render(r.Context(), w)
+		return
 	}
 
 	stationName := h.getStationName(r, stationID)
@@ -165,6 +166,8 @@ func (h *Handler) DeleteFavoriteStation(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) GetNearestStation(w http.ResponseWriter, r *http.Request) {
+	const distanceThresholdKm = 5.0
+
 	latStr := r.URL.Query().Get("lat")
 	lonStr := r.URL.Query().Get("lon")
 
@@ -180,21 +183,45 @@ func (h *Handler) GetNearestStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	station, err := h.stationService.FindNearest(r.Context(), lat, lon)
+	// Check if previous position was provided
+	prevLatStr := r.URL.Query().Get("prevLat")
+	prevLonStr := r.URL.Query().Get("prevLon")
+	prevStationID := r.URL.Query().Get("prevStationId")
+	prevStationName := r.URL.Query().Get("prevStationName")
+
+	if prevLatStr != "" && prevLonStr != "" && prevStationID != "" {
+		prevLat, err1 := strconv.ParseFloat(prevLatStr, 64)
+		prevLon, err2 := strconv.ParseFloat(prevLonStr, 64)
+
+		if err1 == nil && err2 == nil {
+			dist := station.Haversine(prevLat, prevLon, lat, lon)
+			if dist <= distanceThresholdKm {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{
+					"id":      prevStationID,
+					"name":    prevStationName,
+					"cached":  "true",
+				})
+				return
+			}
+		}
+	}
+
+	st, err := h.stationService.FindNearest(r.Context(), lat, lon)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if station == nil {
+	if st == nil {
 		http.Error(w, "no stations found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"id":   station.ID,
-		"name": station.Name,
+		"id":   st.ID,
+		"name": st.Name,
 	})
 }
 
