@@ -1,0 +1,42 @@
+# Treni
+
+Train tracking web application built with Go, HTMX, and templ.
+
+## Build and Run
+
+```bash
+make build          # Build binary
+make run            # Build and run
+make test           # Run tests
+make clean          # Clean build artifacts
+```
+
+## Code Generation
+
+```bash
+make generate       # Run both sqlc and templ generate
+make sqlc           # Generate SQL queries
+make templ          # Generate templ templates
+```
+
+## Database Migrations
+
+```bash
+make migrate-up     # Apply migrations
+make migrate-down   # Rollback last migration
+make migrate-create # Create new migration
+```
+
+## Code Quality
+
+```bash
+make fmt            # Format code
+make vet            # Run go vet (includes fmt)
+```
+
+## Tech Stack
+
+- Go with chi router
+- SQLite with sqlc
+- templ for templates
+- HTMX for interactivity
