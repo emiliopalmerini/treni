@@ -33,6 +33,7 @@ type Departure struct {
 	Category         string `json:"categoria"`
 	CategoryDesc     string `json:"categoriaDescrizione"`
 	Origin           string `json:"origine"`
+	OriginID         string `json:"codOrigine"`
 	Destination      string `json:"destinazione"`
 	DepartureTime    int64  `json:"orarioPartenza"`
 	Delay            int    `json:"ritardo"`

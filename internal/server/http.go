@@ -10,6 +10,7 @@ import (
 
 	"github.com/emiliopalmerini/treni/internal/app"
 	"github.com/emiliopalmerini/treni/internal/cache"
+	"github.com/emiliopalmerini/treni/internal/itinerary"
 	"github.com/emiliopalmerini/treni/internal/journey"
 	journeyPersistence "github.com/emiliopalmerini/treni/internal/journey/persistence"
 	"github.com/emiliopalmerini/treni/internal/middleware"
@@ -72,6 +73,9 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	realtimeHandler := realtime.NewHandler(vtClient)
 	realtime.RegisterRoutes(r, realtimeHandler)
 
+	// Itinerary module
+	itineraryService := itinerary.NewService(vtClient)
+
 	// Watchlist module
 	watchlistRepo := watchlistPersistence.NewSQLiteRepository(db)
 	watchlistService := watchlist.NewService(watchlistRepo, vtClient)
@@ -87,7 +91,7 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	preferitaService := preferita.NewService(preferitaRepo)
 
 	// Web UI
-	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService, preferitaService)
+	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService, preferitaService, itineraryService)
 	web.RegisterRoutes(r, webHandler)
 
 	return &http.Server{

@@ -33,6 +33,9 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 		r.Get("/train/search", h.SearchTrains)
 		r.Get("/train/{trainNumber}", h.GetTrainDetail)
 
+		// Itinerary
+		r.Get("/itinerary/search", h.SearchItinerary)
+
 		// Watchlist
 		r.Get("/watchlist", h.GetWatchlist)
 		r.Post("/watchlist", h.AddToWatchlist)
