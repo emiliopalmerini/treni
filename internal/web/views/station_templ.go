@@ -117,7 +117,7 @@ func StationPage(stationName string, stationID string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\"></div></div><button class=\"btn btn-outline\" hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"load, htmx:afterSwap from:#station-table delay:500ms\" hx-swap=\"innerHTML\"></div></div><button class=\"btn btn-outline\" hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
