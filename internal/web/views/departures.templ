@@ -191,11 +191,17 @@ templ ArrivalsTable(arrivals []ArrivalView) {
 					<th>Provenienza</th>
 					<th>Stato</th>
 					<th>Bin</th>
+					<th class="hide-mobile"></th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, a := range arrivals {
-					<tr>
+					<tr
+						class="expandable-row"
+						x-data="{ open: false }"
+						@click={ fmt.Sprintf("if(open) { document.getElementById('detail-%d').innerHTML = ''; open = false; } else { htmx.ajax('GET', '/api/train/%d', '#detail-%d'); open = true; }", a.TrainNumber, a.TrainNumber, a.TrainNumber) }
+						style="cursor: pointer;"
+					>
 						<td class="font-bold">{ a.Time.Format("15:04") }</td>
 						<td>
 							if a.Category != "" {
@@ -214,7 +220,11 @@ templ ArrivalsTable(arrivals []ArrivalView) {
 								<span class="text-muted">—</span>
 							}
 						</td>
+						<td class="hide-mobile">
+							<span class="btn btn-sm btn-outline" x-text="open ? 'Chiudi' : 'Info'"></span>
+						</td>
 					</tr>
+					<tr id={ fmt.Sprintf("detail-%d", a.TrainNumber) } class="detail-row"></tr>
 				}
 			</tbody>
 		</table>
