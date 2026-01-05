@@ -19,6 +19,8 @@ import (
 	"github.com/emiliopalmerini/treni/internal/preferita"
 	preferitaPersistence "github.com/emiliopalmerini/treni/internal/preferita/persistence"
 	"github.com/emiliopalmerini/treni/internal/realtime"
+	"github.com/emiliopalmerini/treni/internal/staticdata"
+	staticdataPersistence "github.com/emiliopalmerini/treni/internal/staticdata/persistence"
 	"github.com/emiliopalmerini/treni/internal/station"
 	stationPersistence "github.com/emiliopalmerini/treni/internal/station/persistence"
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
@@ -44,24 +46,37 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 
 	// Station module
 	stationRepo := stationPersistence.NewSQLiteRepository(db)
-	stationService := station.NewService(stationRepo, vtClient)
+	stationRepoAdapter := staticdata.NewStationRepositoryAdapter(stationRepo)
+
+	// Create composite provider for station lookups with fallback
+	sqliteSource := staticdata.NewSQLiteStationSource(stationRepoAdapter)
+	apiSource := staticdata.NewAPIStationSource(httpClient)
+	compositeProvider := staticdata.NewCompositeStationProvider(
+		cfg.StationStalenessAge,
+		stationRepoAdapter,
+		sqliteSource,
+		apiSource,
+	)
+	stationProvider := staticdata.NewStationProviderAdapter(compositeProvider)
+
+	stationService := station.NewService(stationRepo, vtClient).WithProvider(stationProvider)
 	stationHandler := station.NewHandler(stationService)
 	station.RegisterRoutes(r, stationHandler)
 
-	// Import stations in background if none exist
-	go func() {
-		count, err := stationService.Count(context.Background())
-		if err != nil {
-			log.Printf("failed to count stations: %v", err)
-			return
-		}
-		if count == 0 {
-			log.Println("no stations found, importing all stations...")
-			if err := stationService.ImportAllStations(context.Background(), nil); err != nil {
-				log.Printf("failed to import stations: %v", err)
-			}
-		}
-	}()
+	// Static data import scheduler
+	metadataRepo := staticdataPersistence.NewSQLiteMetadataRepository(db)
+
+	if cfg.AutoImportEnabled {
+		scheduler := staticdata.NewImportScheduler(
+			metadataRepo,
+			httpClient, // Use raw client for imports, not cached
+			stationRepoAdapter,
+			cfg.ImportRefreshInterval,
+			cfg.StationStalenessAge,
+		)
+		scheduler.Start(context.Background())
+		log.Printf("static data import scheduler started (refresh: %v, max age: %v)", cfg.ImportRefreshInterval, cfg.StationStalenessAge)
+	}
 
 	// Journey module
 	journeyRepo := journeyPersistence.NewSQLiteRepository(db)

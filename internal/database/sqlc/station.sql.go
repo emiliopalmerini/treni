@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 )
 
 const countStations = `-- name: CountStations :one
@@ -21,16 +22,17 @@ func (q *Queries) CountStations(ctx context.Context) (int64, error) {
 }
 
 const createStation = `-- name: CreateStation :exec
-INSERT INTO station (id, name, region, latitude, longitude)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO station (id, name, region, latitude, longitude, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type CreateStationParams struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) CreateStation(ctx context.Context, arg CreateStationParams) error {
@@ -40,6 +42,7 @@ func (q *Queries) CreateStation(ctx context.Context, arg CreateStationParams) er
 		arg.Region,
 		arg.Latitude,
 		arg.Longitude,
+		arg.UpdatedAt,
 	)
 	return err
 }
@@ -54,16 +57,17 @@ func (q *Queries) DeleteStation(ctx context.Context, id string) error {
 }
 
 const getStationByID = `-- name: GetStationByID :one
-SELECT id, name, region, latitude, longitude
+SELECT id, name, region, latitude, longitude, updated_at
 FROM station WHERE id = ?
 `
 
 type GetStationByIDRow struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) GetStationByID(ctx context.Context, id string) (GetStationByIDRow, error) {
@@ -75,21 +79,23 @@ func (q *Queries) GetStationByID(ctx context.Context, id string) (GetStationByID
 		&i.Region,
 		&i.Latitude,
 		&i.Longitude,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listStations = `-- name: ListStations :many
-SELECT id, name, region, latitude, longitude
+SELECT id, name, region, latitude, longitude, updated_at
 FROM station ORDER BY name
 `
 
 type ListStationsRow struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) ListStations(ctx context.Context) ([]ListStationsRow, error) {
@@ -107,6 +113,7 @@ func (q *Queries) ListStations(ctx context.Context) ([]ListStationsRow, error) {
 			&i.Region,
 			&i.Latitude,
 			&i.Longitude,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -122,16 +129,17 @@ func (q *Queries) ListStations(ctx context.Context) ([]ListStationsRow, error) {
 }
 
 const listStationsWithCoordinates = `-- name: ListStationsWithCoordinates :many
-SELECT id, name, region, latitude, longitude
+SELECT id, name, region, latitude, longitude, updated_at
 FROM station WHERE latitude != 0 AND longitude != 0
 `
 
 type ListStationsWithCoordinatesRow struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) ListStationsWithCoordinates(ctx context.Context) ([]ListStationsWithCoordinatesRow, error) {
@@ -149,6 +157,7 @@ func (q *Queries) ListStationsWithCoordinates(ctx context.Context) ([]ListStatio
 			&i.Region,
 			&i.Latitude,
 			&i.Longitude,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -164,16 +173,17 @@ func (q *Queries) ListStationsWithCoordinates(ctx context.Context) ([]ListStatio
 }
 
 const searchStations = `-- name: SearchStations :many
-SELECT id, name, region, latitude, longitude
+SELECT id, name, region, latitude, longitude, updated_at
 FROM station WHERE name LIKE ? ORDER BY name LIMIT 20
 `
 
 type SearchStationsRow struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) SearchStations(ctx context.Context, name string) ([]SearchStationsRow, error) {
@@ -191,6 +201,7 @@ func (q *Queries) SearchStations(ctx context.Context, name string) ([]SearchStat
 			&i.Region,
 			&i.Latitude,
 			&i.Longitude,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -206,16 +217,17 @@ func (q *Queries) SearchStations(ctx context.Context, name string) ([]SearchStat
 }
 
 const updateStation = `-- name: UpdateStation :exec
-UPDATE station SET name = ?, region = ?, latitude = ?, longitude = ?
+UPDATE station SET name = ?, region = ?, latitude = ?, longitude = ?, updated_at = ?
 WHERE id = ?
 `
 
 type UpdateStationParams struct {
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
-	ID        string   `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
+	ID        string     `json:"id"`
 }
 
 func (q *Queries) UpdateStation(ctx context.Context, arg UpdateStationParams) error {
@@ -224,27 +236,30 @@ func (q *Queries) UpdateStation(ctx context.Context, arg UpdateStationParams) er
 		arg.Region,
 		arg.Latitude,
 		arg.Longitude,
+		arg.UpdatedAt,
 		arg.ID,
 	)
 	return err
 }
 
 const upsertStation = `-- name: UpsertStation :exec
-INSERT INTO station (id, name, region, latitude, longitude)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO station (id, name, region, latitude, longitude, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     region = excluded.region,
     latitude = excluded.latitude,
-    longitude = excluded.longitude
+    longitude = excluded.longitude,
+    updated_at = excluded.updated_at
 `
 
 type UpsertStationParams struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Region    *int64   `json:"region"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Region    *int64     `json:"region"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	UpdatedAt *time.Time `json:"updated_at"`
 }
 
 func (q *Queries) UpsertStation(ctx context.Context, arg UpsertStationParams) error {
@@ -254,6 +269,7 @@ func (q *Queries) UpsertStation(ctx context.Context, arg UpsertStationParams) er
 		arg.Region,
 		arg.Latitude,
 		arg.Longitude,
+		arg.UpdatedAt,
 	)
 	return err
 }
