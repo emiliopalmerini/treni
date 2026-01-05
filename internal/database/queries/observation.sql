@@ -38,7 +38,9 @@ GROUP BY station_id;
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -46,13 +48,15 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE train_number = ?
-GROUP BY train_number;
+GROUP BY train_number, origin_id, destination_id;
 
 -- name: GetWorstTrains :many
 SELECT
     train_number,
     train_category as category,
+    origin_id,
     origin_name,
+    destination_id,
     destination_name,
     COUNT(*) as observation_count,
     COALESCE(AVG(delay), 0) as average_delay,
@@ -60,7 +64,7 @@ SELECT
     SUM(CASE WHEN delay = 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_percentage
 FROM train_observation
 WHERE circulation_state != 1
-GROUP BY train_number
+GROUP BY train_number, origin_id, destination_id
 HAVING observation_count >= 3
 ORDER BY average_delay DESC
 LIMIT ?;
