@@ -9,13 +9,42 @@ import (
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 )
 
+// StationData represents station data with freshness info.
+type StationData struct {
+	ID        string
+	Name      string
+	Region    int
+	Latitude  float64
+	Longitude float64
+	UpdatedAt time.Time
+}
+
+// DataFreshness indicates how current the data is.
+type DataFreshness struct {
+	Source      string
+	LastUpdated time.Time
+	IsStale     bool
+}
+
+// StationProvider provides station data with fallback.
+type StationProvider interface {
+	SearchStations(ctx context.Context, query string) ([]*StationData, *DataFreshness, error)
+}
+
 type Service struct {
-	repo   StationRepository
-	client viaggiatreno.Client
+	repo     StationRepository
+	client   viaggiatreno.Client
+	provider StationProvider
 }
 
 func NewService(repo StationRepository, client viaggiatreno.Client) *Service {
 	return &Service{repo: repo, client: client}
+}
+
+// WithProvider adds a composite provider for fallback searches.
+func (s *Service) WithProvider(provider StationProvider) *Service {
+	s.provider = provider
+	return s
 }
 
 func (s *Service) Create(ctx context.Context, entity *Station) error {
@@ -58,6 +87,46 @@ func (s *Service) SearchLive(ctx context.Context, query string) ([]*Station, err
 // Search searches stations from the local database.
 func (s *Service) Search(ctx context.Context, query string) ([]*Station, error) {
 	return s.repo.Search(ctx, query)
+}
+
+// SearchWithFallback searches stations using SQLite first, falling back to API.
+// Returns the data source used in the second return value.
+func (s *Service) SearchWithFallback(ctx context.Context, query string) ([]*Station, string, error) {
+	if s.provider == nil {
+		stations, err := s.repo.Search(ctx, query)
+		return stations, "sqlite", err
+	}
+
+	results, freshness, err := s.provider.SearchStations(ctx, query)
+	if err != nil {
+		return nil, "", err
+	}
+
+	stations := make([]*Station, len(results))
+	for i, r := range results {
+		stations[i] = stationDataToStation(r)
+	}
+
+	source := "sqlite"
+	if freshness != nil {
+		source = freshness.Source
+		if freshness.IsStale {
+			log.Printf("warning: serving stale station data from %s (last updated: %v)", source, freshness.LastUpdated)
+		}
+	}
+
+	return stations, source, nil
+}
+
+func stationDataToStation(sd *StationData) *Station {
+	return &Station{
+		ID:        sd.ID,
+		Name:      sd.Name,
+		Region:    sd.Region,
+		Latitude:  sd.Latitude,
+		Longitude: sd.Longitude,
+		UpdatedAt: sd.UpdatedAt,
+	}
 }
 
 // Count returns the number of stations in the database.

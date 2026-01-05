@@ -46,13 +46,25 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 
 	// Station module
 	stationRepo := stationPersistence.NewSQLiteRepository(db)
-	stationService := station.NewService(stationRepo, vtClient)
+	stationRepoAdapter := staticdata.NewStationRepositoryAdapter(stationRepo)
+
+	// Create composite provider for station lookups with fallback
+	sqliteSource := staticdata.NewSQLiteStationSource(stationRepoAdapter)
+	apiSource := staticdata.NewAPIStationSource(httpClient)
+	compositeProvider := staticdata.NewCompositeStationProvider(
+		cfg.StationStalenessAge,
+		stationRepoAdapter,
+		sqliteSource,
+		apiSource,
+	)
+	stationProvider := staticdata.NewStationProviderAdapter(compositeProvider)
+
+	stationService := station.NewService(stationRepo, vtClient).WithProvider(stationProvider)
 	stationHandler := station.NewHandler(stationService)
 	station.RegisterRoutes(r, stationHandler)
 
 	// Static data import scheduler
 	metadataRepo := staticdataPersistence.NewSQLiteMetadataRepository(db)
-	stationRepoAdapter := staticdata.NewStationRepositoryAdapter(stationRepo)
 
 	if cfg.AutoImportEnabled {
 		scheduler := staticdata.NewImportScheduler(
