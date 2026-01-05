@@ -19,13 +19,9 @@ make sqlc           # Generate SQL queries
 make templ          # Generate templ templates
 ```
 
-## Database Migrations
+## Database
 
-```bash
-make migrate-up     # Apply migrations
-make migrate-down   # Rollback last migration
-make migrate-create # Create new migration
-```
+Migrations are applied automatically when the app starts.
 
 ## Code Quality
 
