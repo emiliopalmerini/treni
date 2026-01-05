@@ -49,7 +49,9 @@ type CategoryStats struct {
 type TrainStats struct {
 	TrainNumber      int     `json:"trainNumber"`
 	Category         string  `json:"category"`
+	OriginID         string  `json:"originId"`
 	OriginName       string  `json:"originName"`
+	DestinationID    string  `json:"destinationId"`
 	DestinationName  string  `json:"destinationName"`
 	ObservationCount int     `json:"observationCount"`
 	AverageDelay     float64 `json:"averageDelay"`

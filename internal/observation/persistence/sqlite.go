@@ -109,7 +109,9 @@ func (r *SQLiteRepository) GetStatsByTrain(ctx context.Context, trainNumber int)
 	return &observation.TrainStats{
 		TrainNumber:      int(row.TrainNumber),
 		Category:         deref(row.Category),
+		OriginID:         deref(row.OriginID),
 		OriginName:       deref(row.OriginName),
+		DestinationID:    deref(row.DestinationID),
 		DestinationName:  deref(row.DestinationName),
 		ObservationCount: int(row.ObservationCount),
 		AverageDelay:     toFloat64(row.AverageDelay),
@@ -129,7 +131,9 @@ func (r *SQLiteRepository) GetWorstTrains(ctx context.Context, limit int) ([]*ob
 		stats[i] = &observation.TrainStats{
 			TrainNumber:      int(row.TrainNumber),
 			Category:         deref(row.Category),
+			OriginID:         deref(row.OriginID),
 			OriginName:       deref(row.OriginName),
+			DestinationID:    deref(row.DestinationID),
 			DestinationName:  deref(row.DestinationName),
 			ObservationCount: int(row.ObservationCount),
 			AverageDelay:     toFloat64(row.AverageDelay),
