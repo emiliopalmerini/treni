@@ -424,6 +424,8 @@ func (h *Handler) GetTrainDetail(w http.ResponseWriter, r *http.Request) {
 
 	stops := make([]views.StopView, len(status.Stops))
 	now := time.Now()
+	foundCurrent := false
+	trainDelay := status.Delay
 	for i, s := range status.Stops {
 		stop := views.StopView{
 			Name:     s.StationName,
@@ -436,6 +438,13 @@ func (h *Handler) GetTrainDetail(w http.ResponseWriter, r *http.Request) {
 			stop.ScheduledArr = t.Format("15:04")
 			if s.ActualArrival > 0 {
 				stop.IsPassed = true
+				if s.ArrivalDelay > 0 {
+					stop.ActualArr = t.Add(time.Duration(s.ArrivalDelay) * time.Minute).Format("15:04")
+				}
+			} else if trainDelay > 0 {
+				// Future stop: estimate using train's current delay
+				stop.DelayArr = trainDelay
+				stop.ActualArr = t.Add(time.Duration(trainDelay) * time.Minute).Format("15:04")
 			}
 		}
 		if s.ScheduledDeparture > 0 {
@@ -443,7 +452,19 @@ func (h *Handler) GetTrainDetail(w http.ResponseWriter, r *http.Request) {
 			stop.ScheduledDep = t.Format("15:04")
 			if s.ActualDeparture > 0 || t.Before(now) {
 				stop.IsPassed = true
+				if s.DepartureDelay > 0 {
+					stop.ActualDep = t.Add(time.Duration(s.DepartureDelay) * time.Minute).Format("15:04")
+				}
+			} else if trainDelay > 0 {
+				// Future stop: estimate using train's current delay
+				stop.DelayDep = trainDelay
+				stop.ActualDep = t.Add(time.Duration(trainDelay) * time.Minute).Format("15:04")
 			}
+		}
+		// Mark the first non-passed stop as current
+		if !stop.IsPassed && !foundCurrent {
+			stop.IsCurrent = true
+			foundCurrent = true
 		}
 		stops[i] = stop
 	}

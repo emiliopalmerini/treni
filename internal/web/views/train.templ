@@ -2,7 +2,9 @@ package views
 
 import (
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 )
 
 type TrainDetailView struct {
@@ -24,6 +26,19 @@ type StopView struct {
 	DelayDep       int
 	Platform       string
 	IsPassed       bool
+	IsCurrent      bool
+}
+
+func titleCase(s string) string {
+	words := strings.Fields(strings.ToLower(s))
+	for i, word := range words {
+		if len(word) > 0 {
+			runes := []rune(word)
+			runes[0] = unicode.ToUpper(runes[0])
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 templ TrainSearchResults(trains []TrainMatchView) {
@@ -69,55 +84,68 @@ type TrainMatchView struct {
 }
 
 templ TrainDetail(train TrainDetailView) {
-	<td colspan="6" class="detail-cell">
+	<td colspan="7" class="detail-cell">
 		<div class="detail-content">
-			<div class="detail-header">
-				<div>
-					<span class="detail-title">
-						if train.Category != "" {
-							<span class="train-cat">{ train.Category }</span>
-						}
-						{ fmt.Sprintf("%d", train.Number) }
-					</span>
-					<span class="detail-route">
-						{ train.Origin } → { train.Destination }
-					</span>
-				</div>
-				@TrainStatusBadge(train.Delay)
-			</div>
-			<div class="stops-list">
+			<div class="stops-list" role="list" aria-label="Fermate del treno">
 				for _, s := range train.Stops {
-					<div class={ "stop-item", templ.KV("stop-passed", s.IsPassed) }>
-						<span class="stop-name">
-							if s.IsPassed {
-								<span class="check">✓</span>
+					<div
+						class={ "stop-item", templ.KV("stop-passed", s.IsPassed), templ.KV("stop-current", s.IsCurrent) }
+						role="listitem"
+					>
+						<div class="stop-info">
+							<span class="stop-name">{ titleCase(s.Name) }</span>
+							if s.IsCurrent {
+								<span class="stop-current-label">Prossima</span>
 							}
-							{ s.Name }
-						</span>
-						<span class="stop-times">
+						</div>
+						<div class="stop-times">
 							if s.ScheduledArr != "" {
-								<span>{ s.ScheduledArr }</span>
-								if s.DelayArr > 0 {
-									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayArr) } min</span>
-								}
+								<div class="time-group">
+									<span class="time-label">arr</span>
+									if s.DelayArr > 0 {
+										<span class="time-value time-scheduled">{ s.ScheduledArr }</span>
+										<span class="time-arrow">→</span>
+										<span class="time-value time-delayed">{ s.ActualArr }</span>
+										@stopDelayBadge(s.DelayArr)
+									} else {
+										<span class="time-value">{ s.ScheduledArr }</span>
+									}
+								</div>
 							}
 							if s.ScheduledDep != "" {
-								<span>{ s.ScheduledDep }</span>
-								if s.DelayDep > 0 {
-									<span class="delay-small">+{ fmt.Sprintf("%d", s.DelayDep) } min</span>
-								}
+								<div class="time-group">
+									<span class="time-label">dep</span>
+									if s.DelayDep > 0 {
+										<span class="time-value time-scheduled">{ s.ScheduledDep }</span>
+										<span class="time-arrow">→</span>
+										<span class="time-value time-delayed">{ s.ActualDep }</span>
+										@stopDelayBadge(s.DelayDep)
+									} else {
+										<span class="time-value">{ s.ScheduledDep }</span>
+									}
+								</div>
 							}
-						</span>
-						<span class="stop-platform">
+						</div>
+						<div class="stop-platform-cell">
 							if s.Platform != "" {
-								<span class="platform">{ s.Platform }</span>
+								<span class="platform platform-sm">{ s.Platform }</span>
 							}
-						</span>
+						</div>
 					</div>
 				}
 			</div>
 		</div>
 	</td>
+}
+
+templ stopDelayBadge(delay int) {
+	if delay <= 5 {
+		<span class="delay-badge delay-minor">+{ fmt.Sprintf("%d", delay) }</span>
+	} else if delay <= 15 {
+		<span class="delay-badge delay-warning">+{ fmt.Sprintf("%d", delay) }</span>
+	} else {
+		<span class="delay-badge delay-severe">+{ fmt.Sprintf("%d", delay) }</span>
+	}
 }
 
 templ TrainStatusBadge(delay int) {

@@ -82,8 +82,8 @@ type Stop struct {
 	StationID          string `json:"id"`
 	StationName        string `json:"stazione"`
 	StopType           string `json:"tipoFermata"` // P=origin, A=destination, F=intermediate
-	ScheduledArrival   int64  `json:"programmataArrivo"`
-	ScheduledDeparture int64  `json:"programmataPartenza"`
+	ScheduledArrival   int64  `json:"arrivo_teorico"`
+	ScheduledDeparture int64  `json:"partenza_teorica"`
 	ActualArrival      int64  `json:"arrivoReale"`
 	ActualDeparture    int64  `json:"partenzaReale"`
 	ArrivalDelay       int    `json:"ritardoArrivo"`
