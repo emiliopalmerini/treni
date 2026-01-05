@@ -8,8 +8,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 
 	// HTML pages
 	r.Get("/", h.Home)
-	r.Get("/departures", h.DeparturesPage)
-	r.Get("/arrivals", h.ArrivalsPage)
+	r.Get("/station", h.StationPage)
 	r.Get("/watchlist", h.WatchlistPage)
 	r.Get("/stats", h.StatsPage)
 
@@ -22,9 +21,8 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 		r.Post("/stations/favorites", h.AddFavoriteStation)
 		r.Delete("/stations/favorites/{id}", h.DeleteFavoriteStation)
 
-		// Departures/Arrivals
-		r.Get("/departures/{stationID}", h.GetDepartures)
-		r.Get("/arrivals/{stationID}", h.GetArrivals)
+		// Station trains (merged departures/arrivals)
+		r.Get("/station/{stationID}", h.GetStationTrains)
 
 		// Stats
 		r.Get("/stats/station/{stationID}", h.GetStationStats)

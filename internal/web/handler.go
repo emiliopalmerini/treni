@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/emiliopalmerini/treni/internal/itinerary"
 	"github.com/emiliopalmerini/treni/internal/observation"
@@ -51,26 +53,15 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	views.Home().Render(r.Context(), w)
 }
 
-func (h *Handler) DeparturesPage(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) StationPage(w http.ResponseWriter, r *http.Request) {
 	stationID := r.URL.Query().Get("station")
 	if stationID == "" {
-		views.StationPicker("Partenze").Render(r.Context(), w)
+		views.StationPicker().Render(r.Context(), w)
 		return
 	}
 
 	stationName := h.getStationName(r, stationID)
-	views.DeparturesPage(stationName, stationID).Render(r.Context(), w)
-}
-
-func (h *Handler) ArrivalsPage(w http.ResponseWriter, r *http.Request) {
-	stationID := r.URL.Query().Get("station")
-	if stationID == "" {
-		views.StationPicker("Arrivi").Render(r.Context(), w)
-		return
-	}
-
-	stationName := h.getStationName(r, stationID)
-	views.ArrivalsPage(stationName, stationID).Render(r.Context(), w)
+	views.StationPage(stationName, stationID).Render(r.Context(), w)
 }
 
 func (h *Handler) WatchlistPage(w http.ResponseWriter, r *http.Request) {
@@ -229,60 +220,112 @@ func (h *Handler) GetNearestStation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) GetDepartures(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetStationTrains(w http.ResponseWriter, r *http.Request) {
 	stationID := chi.URLParam(r, "stationID")
+	now := time.Now()
 
-	departures, err := h.vtClient.Partenze(r.Context(), stationID, time.Now())
-	if err != nil {
+	var departures []viaggiatreno.Departure
+	var arrivals []viaggiatreno.Arrival
+
+	g, ctx := errgroup.WithContext(r.Context())
+
+	g.Go(func() error {
+		var err error
+		departures, err = h.vtClient.Partenze(ctx, stationID, now)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		arrivals, err = h.vtClient.Arrivi(ctx, stationID, now)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	stationName := h.getStationName(r, stationID)
 	go h.observationService.RecordDepartures(context.Background(), stationID, stationName, departures)
-
-	departureViews := make([]views.DepartureView, len(departures))
-	for i, d := range departures {
-		departureViews[i] = views.DepartureView{
-			TrainNumber: d.TrainNumber,
-			Category:    d.CategoryDesc,
-			Destination: d.Destination,
-			Time:        time.UnixMilli(d.DepartureTime),
-			Delay:       d.Delay,
-			Platform:    d.EffectivePlatform(),
-			IsCancelled: d.CirculationState == 1,
-		}
-	}
-
-	views.DeparturesTable(departureViews).Render(r.Context(), w)
-}
-
-func (h *Handler) GetArrivals(w http.ResponseWriter, r *http.Request) {
-	stationID := chi.URLParam(r, "stationID")
-
-	arrivals, err := h.vtClient.Arrivi(r.Context(), stationID, time.Now())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	stationName := h.getStationName(r, stationID)
 	go h.observationService.RecordArrivals(context.Background(), stationID, stationName, arrivals)
 
-	arrivalViews := make([]views.ArrivalView, len(arrivals))
-	for i, a := range arrivals {
-		arrivalViews[i] = views.ArrivalView{
-			TrainNumber: a.TrainNumber,
-			Category:    a.CategoryDesc,
-			Origin:      a.Origin,
-			Time:        time.UnixMilli(a.ArrivalTime),
-			Delay:       a.Delay,
-			Platform:    a.EffectivePlatform(),
-			IsCancelled: a.CirculationState == 1,
+	trains := mergeTrains(departures, arrivals)
+	views.StationTable(trains).Render(r.Context(), w)
+}
+
+func mergeTrains(departures []viaggiatreno.Departure, arrivals []viaggiatreno.Arrival) []views.StationTrainView {
+	trainMap := make(map[int]*views.StationTrainView, len(departures)+len(arrivals))
+
+	for _, d := range departures {
+		if d.DepartureTime <= 0 {
+			continue
+		}
+		t := time.UnixMilli(d.DepartureTime)
+		trainMap[d.TrainNumber] = &views.StationTrainView{
+			TrainNumber:    d.TrainNumber,
+			Category:       d.CategoryDesc,
+			Origin:         d.Origin,
+			Destination:    d.Destination,
+			DepartureTime:  &t,
+			DepartureDelay: d.Delay,
+			Platform:       d.EffectivePlatform(),
+			IsCancelled:    d.IsCancelled(),
 		}
 	}
 
-	views.ArrivalsTable(arrivalViews).Render(r.Context(), w)
+	for _, a := range arrivals {
+		if a.ArrivalTime <= 0 {
+			continue
+		}
+		t := time.UnixMilli(a.ArrivalTime)
+		if existing, ok := trainMap[a.TrainNumber]; ok {
+			existing.ArrivalTime = &t
+			existing.ArrivalDelay = a.Delay
+			existing.IsCancelled = existing.IsCancelled || a.CirculationState == 1
+			if existing.Origin == "" {
+				existing.Origin = a.Origin
+			}
+			if existing.Destination == "" {
+				existing.Destination = a.Destination
+			}
+			if existing.Platform == "" {
+				existing.Platform = a.EffectivePlatform()
+			}
+		} else {
+			trainMap[a.TrainNumber] = &views.StationTrainView{
+				TrainNumber:  a.TrainNumber,
+				Category:     a.CategoryDesc,
+				Origin:       a.Origin,
+				Destination:  a.Destination,
+				ArrivalTime:  &t,
+				ArrivalDelay: a.Delay,
+				Platform:     a.EffectivePlatform(),
+				IsCancelled:  a.CirculationState == 1,
+			}
+		}
+	}
+
+	trains := make([]views.StationTrainView, 0, len(trainMap))
+	for _, t := range trainMap {
+		trains = append(trains, *t)
+	}
+
+	sort.Slice(trains, func(i, j int) bool {
+		return earliestTime(&trains[i]).Before(earliestTime(&trains[j]))
+	})
+
+	return trains
+}
+
+func earliestTime(t *views.StationTrainView) time.Time {
+	if t.ArrivalTime != nil {
+		return *t.ArrivalTime
+	}
+	if t.DepartureTime != nil {
+		return *t.DepartureTime
+	}
+	return time.Time{}
 }
 
 func (h *Handler) SearchItinerary(w http.ResponseWriter, r *http.Request) {

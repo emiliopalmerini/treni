@@ -539,12 +539,16 @@ templ Layout(title string) {
 
 				.mt-2 { margin-top: 1rem; }
 
+				/* Mobile-only elements - hidden by default */
+				.show-mobile { display: none; }
+
 				@media (max-width: 768px) {
 					.stats-grid { grid-template-columns: repeat(2, 1fr); }
 					.container { padding: 0 1rem; }
 					main { padding: 2rem 0; }
 					.section { margin-bottom: 3rem; }
 					.hide-mobile { display: none; }
+					.show-mobile { display: table-cell; }
 
 					/* Nav: wrap on small screens */
 					header .container {
@@ -609,6 +613,20 @@ templ Layout(title string) {
 				}
 
 				[x-cloak] { display: none !important; }
+
+				/* Stacked times for mobile */
+				.time-stacked {
+					display: flex;
+					flex-direction: column;
+					gap: 0.125rem;
+				}
+				.time-arr {
+					font-size: 0.9375rem;
+				}
+				.time-dep {
+					font-size: 0.8125rem;
+					opacity: 0.6;
+				}
 
 				/* Input group for labeled inputs */
 				.input-group {
@@ -824,8 +842,7 @@ templ Layout(title string) {
 					<a href="/" class="logo">Treni</a>
 					<nav>
 						<a href="/">Home</a>
-						<a href="/departures">Partenze</a>
-						<a href="/arrivals">Arrivi</a>
+						<a href="/station">Stazione</a>
 						<a href="/watchlist">Watchlist</a>
 						<a href="/stats">Statistiche</a>
 					</nav>

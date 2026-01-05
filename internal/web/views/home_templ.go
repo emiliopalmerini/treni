@@ -124,15 +124,15 @@ func StationSearchResults(stations []viaggiatreno.Station) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 templ.SafeURL
-				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/departures?station=" + s.ID))
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/station?station=" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 229, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 229, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"btn btn-sm btn-outline\">Partenze</a> <button class=\"btn btn-sm\" hx-post=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"btn btn-sm btn-outline\">Apri</a> <button class=\"btn btn-sm\" hx-post=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -248,59 +248,46 @@ func FavoriteStations(stations []StationView) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var13 templ.SafeURL
-				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/departures?station=" + s.ID))
+				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/station?station=" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 263, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 263, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\" class=\"btn btn-sm btn-outline\">Partenze</a> <a href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\" class=\"btn btn-sm btn-outline\">Apri</a> <button class=\"btn btn-sm btn-danger\" hx-delete=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var14 templ.SafeURL
-				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/arrivals?station=" + s.ID))
+				var templ_7745c5c3_Var14 string
+				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs("/api/stations/favorites/" + s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 264, Col: 59}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 266, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\" class=\"btn btn-sm btn-outline\">Arrivi</a> <button class=\"btn btn-sm btn-danger\" hx-delete=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\" hx-target=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var15 string
-				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("/api/stations/favorites/" + s.ID)
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("#fav-" + s.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 267, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 267, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" hx-target=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var16 string
-				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs("#fav-" + s.ID)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/home.templ`, Line: 268, Col: 34}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" hx-swap=\"outerHTML\">Rimuovi</button></td></tr>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" hx-swap=\"outerHTML\">Rimuovi</button></td></tr>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</tbody></table>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</tbody></table>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -330,12 +317,12 @@ func silentGeolocationScript() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var17 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var17 == nil {
-			templ_7745c5c3_Var17 = templ.NopComponent
+		templ_7745c5c3_Var16 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var16 == nil {
+			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<script>\n\t\t(function() {\n\t\t\tvar STORAGE_KEY = 'treni_nearest_station';\n\t\t\tif (!navigator.geolocation) return;\n\n\t\t\tnavigator.geolocation.getCurrentPosition(function(pos) {\n\t\t\t\tvar lat = pos.coords.latitude;\n\t\t\t\tvar lon = pos.coords.longitude;\n\t\t\t\tvar stored = null;\n\t\t\t\tvar url = '/api/stations/nearest?lat=' + lat + '&lon=' + lon;\n\n\t\t\t\ttry {\n\t\t\t\t\tstored = JSON.parse(localStorage.getItem(STORAGE_KEY));\n\t\t\t\t\tif (stored && stored.stationId && stored.lat && stored.lon) {\n\t\t\t\t\t\turl += '&prevLat=' + stored.lat + '&prevLon=' + stored.lon;\n\t\t\t\t\t\turl += '&prevStationId=' + encodeURIComponent(stored.stationId);\n\t\t\t\t\t\turl += '&prevStationName=' + encodeURIComponent(stored.stationName || '');\n\t\t\t\t\t}\n\t\t\t\t} catch (e) {}\n\n\t\t\t\tfetch(url)\n\t\t\t\t\t.then(function(r) { return r.json(); })\n\t\t\t\t\t.then(function(data) {\n\t\t\t\t\t\tif (data.id) {\n\t\t\t\t\t\t\tlocalStorage.setItem(STORAGE_KEY, JSON.stringify({\n\t\t\t\t\t\t\t\tstationId: data.id,\n\t\t\t\t\t\t\t\tstationName: data.name,\n\t\t\t\t\t\t\t\tlat: lat,\n\t\t\t\t\t\t\t\tlon: lon\n\t\t\t\t\t\t\t}));\n\t\t\t\t\t\t}\n\t\t\t\t\t})\n\t\t\t\t\t.catch(function() {});\n\t\t\t}, function() {});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<script>\n\t\t(function() {\n\t\t\tvar STORAGE_KEY = 'treni_nearest_station';\n\t\t\tif (!navigator.geolocation) return;\n\n\t\t\tnavigator.geolocation.getCurrentPosition(function(pos) {\n\t\t\t\tvar lat = pos.coords.latitude;\n\t\t\t\tvar lon = pos.coords.longitude;\n\t\t\t\tvar stored = null;\n\t\t\t\tvar url = '/api/stations/nearest?lat=' + lat + '&lon=' + lon;\n\n\t\t\t\ttry {\n\t\t\t\t\tstored = JSON.parse(localStorage.getItem(STORAGE_KEY));\n\t\t\t\t\tif (stored && stored.stationId && stored.lat && stored.lon) {\n\t\t\t\t\t\turl += '&prevLat=' + stored.lat + '&prevLon=' + stored.lon;\n\t\t\t\t\t\turl += '&prevStationId=' + encodeURIComponent(stored.stationId);\n\t\t\t\t\t\turl += '&prevStationName=' + encodeURIComponent(stored.stationName || '');\n\t\t\t\t\t}\n\t\t\t\t} catch (e) {}\n\n\t\t\t\tfetch(url)\n\t\t\t\t\t.then(function(r) { return r.json(); })\n\t\t\t\t\t.then(function(data) {\n\t\t\t\t\t\tif (data.id) {\n\t\t\t\t\t\t\tlocalStorage.setItem(STORAGE_KEY, JSON.stringify({\n\t\t\t\t\t\t\t\tstationId: data.id,\n\t\t\t\t\t\t\t\tstationName: data.name,\n\t\t\t\t\t\t\t\tlat: lat,\n\t\t\t\t\t\t\t\tlon: lon\n\t\t\t\t\t\t\t}));\n\t\t\t\t\t\t}\n\t\t\t\t\t})\n\t\t\t\t\t.catch(function() {});\n\t\t\t}, function() {});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

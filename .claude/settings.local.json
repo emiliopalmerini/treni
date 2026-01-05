@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(templ generate:*)",
+      "Bash(go build:*)"
+    ]
+  }
+}
