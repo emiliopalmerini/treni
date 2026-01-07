@@ -104,7 +104,7 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	preferitaService := preferita.NewService(preferitaRepo)
 
 	// Web UI
-	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService, preferitaService, itineraryService)
+	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService, preferitaService, itineraryService, voyageService)
 	web.RegisterRoutes(r, webHandler)
 
 	return &http.Server{

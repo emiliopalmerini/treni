@@ -16,8 +16,10 @@ import (
 	"github.com/emiliopalmerini/treni/internal/preferita"
 	"github.com/emiliopalmerini/treni/internal/station"
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
+	"github.com/emiliopalmerini/treni/internal/voyage"
 	"github.com/emiliopalmerini/treni/internal/watchlist"
 	"github.com/emiliopalmerini/treni/internal/web/views"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -27,6 +29,7 @@ type Handler struct {
 	observationService *observation.Service
 	preferitaService   *preferita.Service
 	itineraryService   *itinerary.Service
+	voyageService      *voyage.Service
 }
 
 func NewHandler(
@@ -36,6 +39,7 @@ func NewHandler(
 	observationService *observation.Service,
 	preferitaService *preferita.Service,
 	itineraryService *itinerary.Service,
+	voyageService *voyage.Service,
 ) *Handler {
 	return &Handler{
 		vtClient:           vtClient,
@@ -44,6 +48,7 @@ func NewHandler(
 		observationService: observationService,
 		preferitaService:   preferitaService,
 		itineraryService:   itineraryService,
+		voyageService:      voyageService,
 	}
 }
 
@@ -73,6 +78,7 @@ func (h *Handler) StatsPage(w http.ResponseWriter, r *http.Request) {
 	categoryStats, _ := h.observationService.GetStatsByCategory(r.Context())
 	worstTrains, _ := h.observationService.GetWorstTrains(r.Context(), 10)
 	worstStations, _ := h.observationService.GetWorstStations(r.Context(), 10)
+	recentVoyages, _ := h.voyageService.GetRecentVoyages(r.Context(), 10)
 	recentObs, _ := h.observationService.GetRecentObservations(r.Context(), 20)
 
 	statsView := views.StatsPageView{
@@ -80,6 +86,7 @@ func (h *Handler) StatsPage(w http.ResponseWriter, r *http.Request) {
 		Categories:         toCategoryStatsViews(categoryStats),
 		WorstTrains:        toTrainStatsViews(worstTrains),
 		WorstStations:      toStationStatsViews(worstStations),
+		RecentVoyages:      toVoyageListViews(recentVoyages),
 		RecentObservations: toObservationViews(recentObs),
 	}
 
@@ -705,6 +712,84 @@ func toObservationViews(obs []*observation.TrainObservation) []views.Observation
 			DestinationName: o.DestinationName,
 			Delay:           o.Delay,
 			IsCancelled:     o.CirculationState == 1,
+		}
+	}
+	return result
+}
+
+// Voyage handlers
+
+func (h *Handler) GetVoyageDetail(w http.ResponseWriter, r *http.Request) {
+	voyageIDStr := chi.URLParam(r, "voyageID")
+	voyageID, err := uuid.Parse(voyageIDStr)
+	if err != nil {
+		http.Error(w, "Invalid voyage ID", http.StatusBadRequest)
+		return
+	}
+
+	voyageWithStops, err := h.voyageService.GetVoyageWithStops(r.Context(), voyageID)
+	if err != nil {
+		http.Error(w, "Voyage not found", http.StatusNotFound)
+		return
+	}
+
+	voyageView := toVoyageDetailView(voyageWithStops)
+	views.VoyageDetailPage(voyageView).Render(r.Context(), w)
+}
+
+func (h *Handler) GetRecentVoyages(w http.ResponseWriter, r *http.Request) {
+	voyages, err := h.voyageService.GetRecentVoyages(r.Context(), 20)
+	if err != nil {
+		http.Error(w, "Failed to fetch voyages", http.StatusInternalServerError)
+		return
+	}
+
+	voyageViews := toVoyageListViews(voyages)
+	views.VoyageList(voyageViews).Render(r.Context(), w)
+}
+
+func toVoyageDetailView(v *voyage.VoyageWithStops) views.VoyageDetailView {
+	stops := make([]views.VoyageStopView, len(v.Stops))
+	for i, stop := range v.Stops {
+		stops[i] = views.VoyageStopView{
+			StationID:          stop.StationID,
+			StationName:        stop.StationName,
+			StopSequence:       stop.StopSequence,
+			StopType:           stop.StopType,
+			ScheduledArrival:   stop.ScheduledArrival,
+			ScheduledDeparture: stop.ScheduledDeparture,
+			ActualArrival:      stop.ActualArrival,
+			ActualDeparture:    stop.ActualDeparture,
+			ArrivalDelay:       stop.ArrivalDelay,
+			DepartureDelay:     stop.DepartureDelay,
+			Platform:           stop.Platform,
+			IsSuppressed:       stop.IsSuppressed,
+			LastObservationAt:  stop.LastObservationAt,
+		}
+	}
+
+	return views.VoyageDetailView{
+		VoyageID:        v.ID.String(),
+		TrainNumber:     v.TrainNumber,
+		TrainCategory:   v.TrainCategory,
+		OriginName:      v.OriginName,
+		DestinationName: v.DestinationName,
+		ScheduledDate:   v.ScheduledDate,
+		Stops:           stops,
+	}
+}
+
+func toVoyageListViews(voyages []*voyage.Voyage) []views.VoyageListView {
+	result := make([]views.VoyageListView, len(voyages))
+	for i, v := range voyages {
+		result[i] = views.VoyageListView{
+			VoyageID:        v.ID.String(),
+			TrainNumber:     v.TrainNumber,
+			TrainCategory:   v.TrainCategory,
+			OriginName:      v.OriginName,
+			DestinationName: v.DestinationName,
+			ScheduledDate:   v.ScheduledDate,
+			UpdatedAt:       v.UpdatedAt,
 		}
 	}
 	return result
