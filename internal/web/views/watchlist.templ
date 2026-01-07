@@ -39,7 +39,7 @@ templ WatchlistPage() {
 			<div
 				id="watchlist-table"
 				hx-get="/api/watchlist"
-				hx-trigger="load"
+				hx-trigger="load, every 60s"
 				hx-swap="innerHTML"
 			>
 				<div class="loading">

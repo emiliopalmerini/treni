@@ -46,7 +46,7 @@ templ StationPage(stationName string, stationID string) {
 					<div
 						id="station-stats"
 						hx-get={ "/api/stats/station/" + stationID }
-						hx-trigger="load"
+						hx-trigger="load, htmx:afterSwap from:#station-table delay:500ms"
 						hx-swap="innerHTML"
 					></div>
 				</div>
@@ -63,7 +63,7 @@ templ StationPage(stationName string, stationID string) {
 			<div
 				id="station-table"
 				hx-get={ "/api/station/" + stationID }
-				hx-trigger="load"
+				hx-trigger="load, every 30s"
 				hx-swap="innerHTML"
 			>
 				<div class="loading">
