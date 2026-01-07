@@ -11,8 +11,6 @@ import (
 	"github.com/emiliopalmerini/treni/internal/app"
 	"github.com/emiliopalmerini/treni/internal/cache"
 	"github.com/emiliopalmerini/treni/internal/itinerary"
-	"github.com/emiliopalmerini/treni/internal/journey"
-	journeyPersistence "github.com/emiliopalmerini/treni/internal/journey/persistence"
 	"github.com/emiliopalmerini/treni/internal/middleware"
 	"github.com/emiliopalmerini/treni/internal/observation"
 	observationPersistence "github.com/emiliopalmerini/treni/internal/observation/persistence"
@@ -24,6 +22,8 @@ import (
 	"github.com/emiliopalmerini/treni/internal/station"
 	stationPersistence "github.com/emiliopalmerini/treni/internal/station/persistence"
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
+	"github.com/emiliopalmerini/treni/internal/voyage"
+	voyagePersistence "github.com/emiliopalmerini/treni/internal/voyage/persistence"
 	"github.com/emiliopalmerini/treni/internal/watchlist"
 	watchlistPersistence "github.com/emiliopalmerini/treni/internal/watchlist/persistence"
 	"github.com/emiliopalmerini/treni/internal/web"
@@ -78,11 +78,9 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 		log.Printf("static data import scheduler started (refresh: %v, max age: %v)", cfg.ImportRefreshInterval, cfg.StationStalenessAge)
 	}
 
-	// Journey module
-	journeyRepo := journeyPersistence.NewSQLiteRepository(db)
-	journeyService := journey.NewService(journeyRepo, vtClient)
-	journeyHandler := journey.NewHandler(journeyService)
-	journey.RegisterRoutes(r, journeyHandler)
+	// Voyage module
+	voyageRepo := voyagePersistence.NewSQLiteRepository(db)
+	voyageService := voyage.NewService(voyageRepo, vtClient)
 
 	// Realtime module
 	realtimeHandler := realtime.NewHandler(vtClient)
@@ -99,7 +97,7 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 
 	// Observation module
 	observationRepo := observationPersistence.NewSQLiteRepository(db)
-	observationService := observation.NewService(observationRepo)
+	observationService := observation.NewService(observationRepo, voyageService)
 
 	// Preferita module
 	preferitaRepo := preferitaPersistence.NewSQLiteRepository(db)

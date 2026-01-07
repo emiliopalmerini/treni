@@ -24,33 +24,6 @@ type ImportMetadatum struct {
 	ErrorMessage     *string   `json:"error_message"`
 }
 
-type Journey struct {
-	ID                 string     `json:"id"`
-	TrainNumber        int64      `json:"train_number"`
-	OriginID           string     `json:"origin_id"`
-	OriginName         string     `json:"origin_name"`
-	DestinationID      string     `json:"destination_id"`
-	DestinationName    string     `json:"destination_name"`
-	ScheduledDeparture *time.Time `json:"scheduled_departure"`
-	ActualDeparture    *time.Time `json:"actual_departure"`
-	Delay              *int64     `json:"delay"`
-	RecordedAt         time.Time  `json:"recorded_at"`
-}
-
-type JourneyStop struct {
-	ID                 string     `json:"id"`
-	JourneyID          string     `json:"journey_id"`
-	StationID          string     `json:"station_id"`
-	StationName        string     `json:"station_name"`
-	ScheduledArrival   *time.Time `json:"scheduled_arrival"`
-	ScheduledDeparture *time.Time `json:"scheduled_departure"`
-	ActualArrival      *time.Time `json:"actual_arrival"`
-	ActualDeparture    *time.Time `json:"actual_departure"`
-	ArrivalDelay       *int64     `json:"arrival_delay"`
-	DepartureDelay     *int64     `json:"departure_delay"`
-	Platform           *string    `json:"platform"`
-}
-
 type Preferitum struct {
 	StationID string `json:"station_id"`
 	Name      string `json:"name"`
@@ -92,6 +65,40 @@ type TrainObservation struct {
 	Platform         *string    `json:"platform"`
 	CirculationState *int64     `json:"circulation_state"`
 	ScheduledDate    *string    `json:"scheduled_date"`
+	VoyageStopID     *string    `json:"voyage_stop_id"`
+}
+
+type Voyage struct {
+	ID                 string    `json:"id"`
+	TrainNumber        int64     `json:"train_number"`
+	TrainCategory      *string   `json:"train_category"`
+	OriginID           string    `json:"origin_id"`
+	OriginName         string    `json:"origin_name"`
+	DestinationID      string    `json:"destination_id"`
+	DestinationName    string    `json:"destination_name"`
+	ScheduledDate      string    `json:"scheduled_date"`
+	ScheduledDeparture time.Time `json:"scheduled_departure"`
+	CirculationState   *int64    `json:"circulation_state"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+type VoyageStop struct {
+	ID                 string     `json:"id"`
+	VoyageID           string     `json:"voyage_id"`
+	StationID          string     `json:"station_id"`
+	StationName        string     `json:"station_name"`
+	StopSequence       int64      `json:"stop_sequence"`
+	StopType           *string    `json:"stop_type"`
+	ScheduledArrival   *time.Time `json:"scheduled_arrival"`
+	ScheduledDeparture *time.Time `json:"scheduled_departure"`
+	ActualArrival      *time.Time `json:"actual_arrival"`
+	ActualDeparture    *time.Time `json:"actual_departure"`
+	ArrivalDelay       *int64     `json:"arrival_delay"`
+	DepartureDelay     *int64     `json:"departure_delay"`
+	Platform           *string    `json:"platform"`
+	IsSuppressed       *int64     `json:"is_suppressed"`
+	LastObservationAt  *time.Time `json:"last_observation_at"`
 }
 
 type WatchedTrain struct {

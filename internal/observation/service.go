@@ -10,12 +10,21 @@ import (
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 )
 
-type Service struct {
-	repo ObservationRepository
+type VoyageService interface {
+	EnsureVoyageForTrain(ctx context.Context, trainNumber int, originID string, departureTime time.Time) (voyageID uuid.UUID, err error)
+	UpdateVoyageStop(ctx context.Context, voyageID uuid.UUID, stationID string, arrivalDelay, departureDelay int, platform string) error
 }
 
-func NewService(repo ObservationRepository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	repo          ObservationRepository
+	voyageService VoyageService
+}
+
+func NewService(repo ObservationRepository, voyageService VoyageService) *Service {
+	return &Service{
+		repo:          repo,
+		voyageService: voyageService,
+	}
 }
 
 func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName string, departures []viaggiatreno.Departure) {
@@ -45,6 +54,9 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 			CirculationState: d.CirculationState,
 		}
 		entities = append(entities, entity)
+
+		// Ensure voyage exists and update stop in background
+		go s.ensureAndUpdateVoyage(context.Background(), d.TrainNumber, d.OriginID, time.UnixMilli(d.DepartureTime), stationID, 0, d.Delay, d.EffectivePlatform())
 	}
 
 	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
@@ -79,10 +91,29 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 			CirculationState: a.CirculationState,
 		}
 		entities = append(entities, entity)
+
+		// Ensure voyage exists and update stop in background
+		go s.ensureAndUpdateVoyage(context.Background(), a.TrainNumber, a.OriginID, time.UnixMilli(a.ArrivalTime), stationID, a.Delay, 0, a.EffectivePlatform())
 	}
 
 	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
 		log.Printf("failed to record arrivals: %v", err)
+	}
+}
+
+func (s *Service) ensureAndUpdateVoyage(ctx context.Context, trainNumber int, originID string, departureTime time.Time, stationID string, arrivalDelay, departureDelay int, platform string) {
+	if s.voyageService == nil {
+		return
+	}
+
+	voyageID, err := s.voyageService.EnsureVoyageForTrain(ctx, trainNumber, originID, departureTime)
+	if err != nil {
+		log.Printf("failed to ensure voyage for train %d: %v", trainNumber, err)
+		return
+	}
+
+	if err := s.voyageService.UpdateVoyageStop(ctx, voyageID, stationID, arrivalDelay, departureDelay, platform); err != nil {
+		log.Printf("failed to update voyage stop for train %d at station %s: %v", trainNumber, stationID, err)
 	}
 }
 
