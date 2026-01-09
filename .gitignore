@@ -44,3 +44,6 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# Nix build output
+result
