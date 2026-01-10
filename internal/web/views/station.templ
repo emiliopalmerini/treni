@@ -229,7 +229,7 @@ templ stationPickerRedirectScript() {
 			try {
 				var stored = JSON.parse(localStorage.getItem('treni_nearest_station'));
 				if (stored && stored.stationId) {
-					window.location.replace('/station?station=' + stored.stationId);
+					window.location.replace('/?station=' + stored.stationId);
 					return;
 				}
 			} catch (e) {}
@@ -254,7 +254,7 @@ templ PickerStationResults(stations []StationResult) {
 					<tr>
 						<td class="font-bold">{ s.Name } <span class="text-muted">({ s.ID })</span></td>
 						<td class="actions">
-							<a href={ templ.SafeURL("/station?station=" + s.ID) } class="btn btn-sm">Seleziona</a>
+							<a href={ templ.SafeURL("/?station=" + s.ID) } class="btn btn-sm">Seleziona</a>
 						</td>
 					</tr>
 				}
@@ -266,4 +266,70 @@ templ PickerStationResults(stations []StationResult) {
 type StationResult struct {
 	ID   string
 	Name string
+}
+
+// StationView is used for favorite stations display
+type StationView struct {
+	ID   string
+	Name string
+}
+
+templ StationSearchResults(stations []StationResult) {
+	if len(stations) == 0 {
+		<p class="empty">Nessun risultato</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Stazione</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, s := range stations {
+					<tr>
+						<td class="font-bold">{ s.Name } <span class="text-muted">({ s.ID })</span></td>
+						<td class="actions">
+							<a href={ templ.SafeURL("/?station=" + s.ID) } class="btn btn-sm">Seleziona</a>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ FavoriteStations(stations []StationView) {
+	if len(stations) == 0 {
+		<p class="empty">Nessuna stazione preferita</p>
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>Stazione</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody hx-confirm="Rimuovere dai preferiti?" hx-target="closest tr" hx-swap="outerHTML">
+				for _, s := range stations {
+					<tr>
+						<td class="font-bold">
+							<a href={ templ.SafeURL("/?station=" + s.ID) }>{ s.Name }</a>
+						</td>
+						<td class="actions">
+							<button
+								class="btn btn-sm btn-danger"
+								hx-delete={ "/api/stations/favorites/" + s.ID }
+							>
+								Rimuovi
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ EmptyRow() {
 }

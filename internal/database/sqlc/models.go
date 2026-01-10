@@ -39,15 +39,6 @@ type Station struct {
 	UpdatedAt  *time.Time `json:"updated_at"`
 }
 
-type TrainCheck struct {
-	ID          string    `json:"id"`
-	WatchedID   string    `json:"watched_id"`
-	TrainNumber int64     `json:"train_number"`
-	Delay       *int64    `json:"delay"`
-	Status      string    `json:"status"`
-	CheckedAt   time.Time `json:"checked_at"`
-}
-
 type TrainObservation struct {
 	ID               string     `json:"id"`
 	ObservedAt       time.Time  `json:"observed_at"`
@@ -99,16 +90,4 @@ type VoyageStop struct {
 	Platform           *string    `json:"platform"`
 	IsSuppressed       *int64     `json:"is_suppressed"`
 	LastObservationAt  *time.Time `json:"last_observation_at"`
-}
-
-type WatchedTrain struct {
-	ID          string    `json:"id"`
-	TrainNumber int64     `json:"train_number"`
-	OriginID    string    `json:"origin_id"`
-	OriginName  string    `json:"origin_name"`
-	Destination string    `json:"destination"`
-	DaysOfWeek  *string   `json:"days_of_week"`
-	Notes       *string   `json:"notes"`
-	Active      *int64    `json:"active"`
-	CreatedAt   time.Time `json:"created_at"`
 }

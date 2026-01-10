@@ -3,7 +3,6 @@ package views
 import (
 	"fmt"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -17,16 +16,16 @@ type TrainDetailView struct {
 }
 
 type StopView struct {
-	Name           string
-	ScheduledArr   string
-	ScheduledDep   string
-	ActualArr      string
-	ActualDep      string
-	DelayArr       int
-	DelayDep       int
-	Platform       string
-	IsPassed       bool
-	IsCurrent      bool
+	Name         string
+	ScheduledArr string
+	ScheduledDep string
+	ActualArr    string
+	ActualDep    string
+	DelayArr     int
+	DelayDep     int
+	Platform     string
+	IsPassed     bool
+	IsCurrent    bool
 }
 
 func titleCase(s string) string {
@@ -39,48 +38,6 @@ func titleCase(s string) string {
 		}
 	}
 	return strings.Join(words, " ")
-}
-
-templ TrainSearchResults(trains []TrainMatchView) {
-	if len(trains) == 0 {
-		<p class="empty">Nessun treno trovato</p>
-	} else {
-		<table>
-			<thead>
-				<tr>
-					<th>Treno</th>
-					<th>Origine</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				for _, t := range trains {
-					<tr>
-						<td class="train-num">{ t.Number }</td>
-						<td>{ t.Origin }</td>
-						<td class="actions">
-							<button
-								class="btn btn-sm"
-								hx-get={ fmt.Sprintf("/api/train/%s?origin=%s&ts=%d", t.Number, t.OriginID, t.DepartureTS) }
-								hx-target="#train-detail-modal"
-								hx-swap="innerHTML"
-							>
-								Dettagli
-							</button>
-						</td>
-					</tr>
-				}
-			</tbody>
-		</table>
-		<div id="train-detail-modal" class="mt-4"></div>
-	}
-}
-
-type TrainMatchView struct {
-	Number      string
-	Origin      string
-	OriginID    string
-	DepartureTS int64
 }
 
 templ TrainDetail(train TrainDetailView) {
@@ -148,24 +105,3 @@ templ stopDelayBadge(delay int) {
 	}
 }
 
-templ TrainStatusBadge(delay int) {
-	if delay > 0 {
-		<span class="badge badge-warning">+{ fmt.Sprintf("%d", delay) } min</span>
-	} else {
-		<span class="badge badge-ok">Orario</span>
-	}
-}
-
-func stopRowClass(isPassed bool) string {
-	if isPassed {
-		return "text-muted"
-	}
-	return ""
-}
-
-func formatTime(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format("15:04")
-}
