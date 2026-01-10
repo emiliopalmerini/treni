@@ -3,6 +3,7 @@ package observation
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,23 +11,27 @@ import (
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 )
 
-type VoyageService interface {
-	EnsureVoyageForTrain(ctx context.Context, trainNumber int, originID string, departureTime time.Time) (voyageID uuid.UUID, err error)
-	UpdateVoyageStop(ctx context.Context, voyageID uuid.UUID, stationID string, arrivalDelay, departureDelay int, platform string) error
-}
-
+// Service handles observation business logic.
 type Service struct {
-	repo          ObservationRepository
-	voyageService VoyageService
+	repo     ObservationRepository
+	notifier ObservationNotifier
+	wg       sync.WaitGroup
+	mu       sync.Mutex
+	closed   bool
 }
 
-func NewService(repo ObservationRepository, voyageService VoyageService) *Service {
+// NewService creates a new observation service.
+func NewService(repo ObservationRepository, notifier ObservationNotifier) *Service {
+	if notifier == nil {
+		notifier = &NoopNotifier{}
+	}
 	return &Service{
-		repo:          repo,
-		voyageService: voyageService,
+		repo:     repo,
+		notifier: notifier,
 	}
 }
 
+// RecordDepartures records train departure observations.
 func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName string, departures []viaggiatreno.Departure) {
 	if len(departures) == 0 {
 		return
@@ -55,8 +60,16 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 		}
 		entities = append(entities, entity)
 
-		// Ensure voyage exists and update stop in background
-		go s.ensureAndUpdateVoyage(context.Background(), d.TrainNumber, d.OriginID, time.UnixMilli(d.DepartureTime), stationID, 0, d.Delay, d.EffectivePlatform())
+		// Notify listeners in background with proper goroutine management
+		s.notifyAsync(ObservationEvent{
+			TrainNumber:    d.TrainNumber,
+			OriginID:       d.OriginID,
+			DepartureTime:  time.UnixMilli(d.DepartureTime),
+			StationID:      stationID,
+			ArrivalDelay:   0,
+			DepartureDelay: d.Delay,
+			Platform:       d.EffectivePlatform(),
+		})
 	}
 
 	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
@@ -64,6 +77,7 @@ func (s *Service) RecordDepartures(ctx context.Context, stationID, stationName s
 	}
 }
 
+// RecordArrivals records train arrival observations.
 func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName string, arrivals []viaggiatreno.Arrival) {
 	if len(arrivals) == 0 {
 		return
@@ -92,8 +106,16 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 		}
 		entities = append(entities, entity)
 
-		// Ensure voyage exists and update stop in background
-		go s.ensureAndUpdateVoyage(context.Background(), a.TrainNumber, a.OriginID, time.UnixMilli(a.ArrivalTime), stationID, a.Delay, 0, a.EffectivePlatform())
+		// Notify listeners in background with proper goroutine management
+		s.notifyAsync(ObservationEvent{
+			TrainNumber:    a.TrainNumber,
+			OriginID:       a.OriginID,
+			DepartureTime:  time.UnixMilli(a.ArrivalTime),
+			StationID:      stationID,
+			ArrivalDelay:   a.Delay,
+			DepartureDelay: 0,
+			Platform:       a.EffectivePlatform(),
+		})
 	}
 
 	if err := s.repo.UpsertBatch(ctx, entities); err != nil {
@@ -101,20 +123,32 @@ func (s *Service) RecordArrivals(ctx context.Context, stationID, stationName str
 	}
 }
 
-func (s *Service) ensureAndUpdateVoyage(ctx context.Context, trainNumber int, originID string, departureTime time.Time, stationID string, arrivalDelay, departureDelay int, platform string) {
-	if s.voyageService == nil {
+// notifyAsync sends an observation event to the notifier in a background goroutine.
+// The goroutine is tracked via WaitGroup for graceful shutdown.
+func (s *Service) notifyAsync(event ObservationEvent) {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
 		return
 	}
+	s.wg.Add(1)
+	s.mu.Unlock()
 
-	voyageID, err := s.voyageService.EnsureVoyageForTrain(ctx, trainNumber, originID, departureTime)
-	if err != nil {
-		log.Printf("failed to ensure voyage for train %d: %v", trainNumber, err)
-		return
-	}
+	go func() {
+		defer s.wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		s.notifier.OnObservation(ctx, event)
+	}()
+}
 
-	if err := s.voyageService.UpdateVoyageStop(ctx, voyageID, stationID, arrivalDelay, departureDelay, platform); err != nil {
-		log.Printf("failed to update voyage stop for train %d at station %s: %v", trainNumber, stationID, err)
-	}
+// Shutdown waits for all background goroutines to complete.
+// Call this during application shutdown to ensure clean termination.
+func (s *Service) Shutdown() {
+	s.mu.Lock()
+	s.closed = true
+	s.mu.Unlock()
+	s.wg.Wait()
 }
 
 func (s *Service) GetGlobalStats(ctx context.Context) (*GlobalStats, error) {

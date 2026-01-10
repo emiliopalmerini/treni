@@ -10,13 +10,11 @@ import (
 
 	"github.com/emiliopalmerini/treni/internal/app"
 	"github.com/emiliopalmerini/treni/internal/cache"
-	"github.com/emiliopalmerini/treni/internal/itinerary"
 	"github.com/emiliopalmerini/treni/internal/middleware"
 	"github.com/emiliopalmerini/treni/internal/observation"
 	observationPersistence "github.com/emiliopalmerini/treni/internal/observation/persistence"
 	"github.com/emiliopalmerini/treni/internal/preferita"
 	preferitaPersistence "github.com/emiliopalmerini/treni/internal/preferita/persistence"
-	"github.com/emiliopalmerini/treni/internal/realtime"
 	"github.com/emiliopalmerini/treni/internal/staticdata"
 	staticdataPersistence "github.com/emiliopalmerini/treni/internal/staticdata/persistence"
 	"github.com/emiliopalmerini/treni/internal/station"
@@ -24,8 +22,6 @@ import (
 	"github.com/emiliopalmerini/treni/internal/viaggiatreno"
 	"github.com/emiliopalmerini/treni/internal/voyage"
 	voyagePersistence "github.com/emiliopalmerini/treni/internal/voyage/persistence"
-	"github.com/emiliopalmerini/treni/internal/watchlist"
-	watchlistPersistence "github.com/emiliopalmerini/treni/internal/watchlist/persistence"
 	"github.com/emiliopalmerini/treni/internal/web"
 )
 
@@ -82,29 +78,19 @@ func NewHTTPServer(cfg *app.Config, db *sql.DB) *http.Server {
 	voyageRepo := voyagePersistence.NewSQLiteRepository(db)
 	voyageService := voyage.NewService(voyageRepo, vtClient)
 
-	// Realtime module
-	realtimeHandler := realtime.NewHandler(vtClient)
-	realtime.RegisterRoutes(r, realtimeHandler)
-
-	// Itinerary module
-	itineraryService := itinerary.NewService(vtClient)
-
-	// Watchlist module
-	watchlistRepo := watchlistPersistence.NewSQLiteRepository(db)
-	watchlistService := watchlist.NewService(watchlistRepo, vtClient)
-	watchlistHandler := watchlist.NewHandler(watchlistService)
-	watchlist.RegisterRoutes(r, watchlistHandler)
+	// Create voyage notifier for observation events
+	voyageNotifier := voyage.NewObservationNotifier(voyageService)
 
 	// Observation module
 	observationRepo := observationPersistence.NewSQLiteRepository(db)
-	observationService := observation.NewService(observationRepo, voyageService)
+	observationService := observation.NewService(observationRepo, voyageNotifier)
 
 	// Preferita module
 	preferitaRepo := preferitaPersistence.NewSQLiteRepository(db)
 	preferitaService := preferita.NewService(preferitaRepo)
 
 	// Web UI
-	webHandler := web.NewHandler(vtClient, stationService, watchlistService, observationService, preferitaService, itineraryService, voyageService)
+	webHandler := web.NewHandler(cfg, vtClient, stationService, observationService, preferitaService, voyageService)
 	web.RegisterRoutes(r, webHandler)
 
 	return &http.Server{

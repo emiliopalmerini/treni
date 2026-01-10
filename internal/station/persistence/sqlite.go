@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/emiliopalmerini/treni/internal/database/nullable"
 	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/station"
 )
@@ -25,10 +26,10 @@ func (r *SQLiteRepository) Create(ctx context.Context, entity *station.Station) 
 	return r.q.CreateStation(ctx, sqlc.CreateStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
-		Region:    ptr(int64(entity.Region)),
-		Latitude:  ptr(entity.Latitude),
-		Longitude: ptr(entity.Longitude),
-		UpdatedAt: ptr(updatedAt),
+		Region:    nullable.Ptr(int64(entity.Region)),
+		Latitude:  nullable.Ptr(entity.Latitude),
+		Longitude: nullable.Ptr(entity.Longitude),
+		UpdatedAt: nullable.Ptr(updatedAt),
 	})
 }
 
@@ -77,10 +78,10 @@ func (r *SQLiteRepository) Update(ctx context.Context, entity *station.Station) 
 	return r.q.UpdateStation(ctx, sqlc.UpdateStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
-		Region:    ptr(int64(entity.Region)),
-		Latitude:  ptr(entity.Latitude),
-		Longitude: ptr(entity.Longitude),
-		UpdatedAt: ptr(updatedAt),
+		Region:    nullable.Ptr(int64(entity.Region)),
+		Latitude:  nullable.Ptr(entity.Latitude),
+		Longitude: nullable.Ptr(entity.Longitude),
+		UpdatedAt: nullable.Ptr(updatedAt),
 	})
 }
 
@@ -96,33 +97,21 @@ func (r *SQLiteRepository) Upsert(ctx context.Context, entity *station.Station) 
 	return r.q.UpsertStation(ctx, sqlc.UpsertStationParams{
 		ID:        entity.ID,
 		Name:      entity.Name,
-		Region:    ptr(int64(entity.Region)),
-		Latitude:  ptr(entity.Latitude),
-		Longitude: ptr(entity.Longitude),
-		UpdatedAt: ptr(updatedAt),
+		Region:    nullable.Ptr(int64(entity.Region)),
+		Latitude:  nullable.Ptr(entity.Latitude),
+		Longitude: nullable.Ptr(entity.Longitude),
+		UpdatedAt: nullable.Ptr(updatedAt),
 	})
-}
-
-func ptr[T any](v T) *T {
-	return &v
-}
-
-func deref[T any](p *T) T {
-	var zero T
-	if p == nil {
-		return zero
-	}
-	return *p
 }
 
 func rowToStation(row sqlc.GetStationByIDRow) *station.Station {
 	return &station.Station{
 		ID:        row.ID,
 		Name:      row.Name,
-		Region:    int(deref(row.Region)),
-		Latitude:  deref(row.Latitude),
-		Longitude: deref(row.Longitude),
-		UpdatedAt: deref(row.UpdatedAt),
+		Region:    int(nullable.Deref(row.Region)),
+		Latitude:  nullable.Deref(row.Latitude),
+		Longitude: nullable.Deref(row.Longitude),
+		UpdatedAt: nullable.Deref(row.UpdatedAt),
 	}
 }
 
@@ -132,10 +121,10 @@ func listRowsToStations(rows []sqlc.ListStationsRow) []*station.Station {
 		stations[i] = &station.Station{
 			ID:        row.ID,
 			Name:      row.Name,
-			Region:    int(deref(row.Region)),
-			Latitude:  deref(row.Latitude),
-			Longitude: deref(row.Longitude),
-			UpdatedAt: deref(row.UpdatedAt),
+			Region:    int(nullable.Deref(row.Region)),
+			Latitude:  nullable.Deref(row.Latitude),
+			Longitude: nullable.Deref(row.Longitude),
+			UpdatedAt: nullable.Deref(row.UpdatedAt),
 		}
 	}
 	return stations
@@ -147,10 +136,10 @@ func searchRowsToStations(rows []sqlc.SearchStationsRow) []*station.Station {
 		stations[i] = &station.Station{
 			ID:        row.ID,
 			Name:      row.Name,
-			Region:    int(deref(row.Region)),
-			Latitude:  deref(row.Latitude),
-			Longitude: deref(row.Longitude),
-			UpdatedAt: deref(row.UpdatedAt),
+			Region:    int(nullable.Deref(row.Region)),
+			Latitude:  nullable.Deref(row.Latitude),
+			Longitude: nullable.Deref(row.Longitude),
+			UpdatedAt: nullable.Deref(row.UpdatedAt),
 		}
 	}
 	return stations
@@ -162,10 +151,10 @@ func coordRowsToStations(rows []sqlc.ListStationsWithCoordinatesRow) []*station.
 		stations[i] = &station.Station{
 			ID:        row.ID,
 			Name:      row.Name,
-			Region:    int(deref(row.Region)),
-			Latitude:  deref(row.Latitude),
-			Longitude: deref(row.Longitude),
-			UpdatedAt: deref(row.UpdatedAt),
+			Region:    int(nullable.Deref(row.Region)),
+			Latitude:  nullable.Deref(row.Latitude),
+			Longitude: nullable.Deref(row.Longitude),
+			UpdatedAt: nullable.Deref(row.UpdatedAt),
 		}
 	}
 	return stations

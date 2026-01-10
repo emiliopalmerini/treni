@@ -3,10 +3,10 @@ package persistence
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/emiliopalmerini/treni/internal/database/nullable"
 	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/voyage"
 )
@@ -24,14 +24,14 @@ func (r *SQLiteRepository) Create(ctx context.Context, v *voyage.Voyage) error {
 	return r.q.CreateVoyage(ctx, sqlc.CreateVoyageParams{
 		ID:                 v.ID.String(),
 		TrainNumber:        int64(v.TrainNumber),
-		TrainCategory:      strPtr(v.TrainCategory),
+		TrainCategory:      nullable.StrPtr(v.TrainCategory),
 		OriginID:           v.OriginID,
 		OriginName:         v.OriginName,
 		DestinationID:      v.DestinationID,
 		DestinationName:    v.DestinationName,
 		ScheduledDate:      v.ScheduledDate,
 		ScheduledDeparture: v.ScheduledDeparture,
-		CirculationState:   int64Ptr(v.CirculationState),
+		CirculationState:   nullable.Int64Ptr(v.CirculationState),
 		CreatedAt:          v.CreatedAt,
 		UpdatedAt:          v.UpdatedAt,
 	})
@@ -62,8 +62,8 @@ func (r *SQLiteRepository) FindByKey(ctx context.Context, trainNumber int, origi
 
 func (r *SQLiteRepository) Update(ctx context.Context, v *voyage.Voyage) error {
 	return r.q.UpdateVoyage(ctx, sqlc.UpdateVoyageParams{
-		TrainCategory:    strPtr(v.TrainCategory),
-		CirculationState: int64Ptr(v.CirculationState),
+		TrainCategory:    nullable.StrPtr(v.TrainCategory),
+		CirculationState: nullable.Int64Ptr(v.CirculationState),
 		UpdatedAt:        v.UpdatedAt,
 		ID:               v.ID.String(),
 	})
@@ -92,13 +92,13 @@ func (r *SQLiteRepository) CreateStopsBatch(ctx context.Context, stops []*voyage
 
 func (r *SQLiteRepository) UpdateStop(ctx context.Context, stop *voyage.VoyageStop) error {
 	return r.q.UpdateVoyageStop(ctx, sqlc.UpdateVoyageStopParams{
-		ActualArrival:     timePtr(stop.ActualArrival),
-		ActualDeparture:   timePtr(stop.ActualDeparture),
-		ArrivalDelay:      int64Ptr(stop.ArrivalDelay),
-		DepartureDelay:    int64Ptr(stop.DepartureDelay),
-		Platform:          strPtr(stop.Platform),
-		IsSuppressed:      boolToInt64Ptr(stop.IsSuppressed),
-		LastObservationAt: timePtr(stop.LastObservationAt),
+		ActualArrival:     nullable.TimePtr(stop.ActualArrival),
+		ActualDeparture:   nullable.TimePtr(stop.ActualDeparture),
+		ArrivalDelay:      nullable.Int64Ptr(stop.ArrivalDelay),
+		DepartureDelay:    nullable.Int64Ptr(stop.DepartureDelay),
+		Platform:          nullable.StrPtr(stop.Platform),
+		IsSuppressed:      nullable.BoolToInt64Ptr(stop.IsSuppressed),
+		LastObservationAt: nullable.TimePtr(stop.LastObservationAt),
 		ID:                stop.ID.String(),
 	})
 }
@@ -198,14 +198,14 @@ func rowToVoyage(row sqlc.Voyage) *voyage.Voyage {
 	return &voyage.Voyage{
 		ID:                 uuid.MustParse(row.ID),
 		TrainNumber:        int(row.TrainNumber),
-		TrainCategory:      derefStr(row.TrainCategory),
+		TrainCategory:      nullable.Deref(row.TrainCategory),
 		OriginID:           row.OriginID,
 		OriginName:         row.OriginName,
 		DestinationID:      row.DestinationID,
 		DestinationName:    row.DestinationName,
 		ScheduledDate:      row.ScheduledDate,
 		ScheduledDeparture: row.ScheduledDeparture,
-		CirculationState:   derefInt64(row.CirculationState),
+		CirculationState:   nullable.DerefInt64(row.CirculationState),
 		CreatedAt:          row.CreatedAt,
 		UpdatedAt:          row.UpdatedAt,
 	}
@@ -218,15 +218,15 @@ func rowToVoyageStop(row sqlc.VoyageStop) *voyage.VoyageStop {
 		StationID:          row.StationID,
 		StationName:        row.StationName,
 		StopSequence:       int(row.StopSequence),
-		StopType:           derefStr(row.StopType),
+		StopType:           nullable.Deref(row.StopType),
 		ScheduledArrival:   row.ScheduledArrival,
 		ScheduledDeparture: row.ScheduledDeparture,
 		ActualArrival:      row.ActualArrival,
 		ActualDeparture:    row.ActualDeparture,
-		ArrivalDelay:       derefInt64(row.ArrivalDelay),
-		DepartureDelay:     derefInt64(row.DepartureDelay),
-		Platform:           derefStr(row.Platform),
-		IsSuppressed:       derefInt64Bool(row.IsSuppressed),
+		ArrivalDelay:       nullable.DerefInt64(row.ArrivalDelay),
+		DepartureDelay:     nullable.DerefInt64(row.DepartureDelay),
+		Platform:           nullable.Deref(row.Platform),
+		IsSuppressed:       nullable.DerefInt64Bool(row.IsSuppressed),
 		LastObservationAt:  row.LastObservationAt,
 	}
 }
@@ -238,16 +238,16 @@ func stopToCreateParams(stop *voyage.VoyageStop) sqlc.CreateVoyageStopParams {
 		StationID:          stop.StationID,
 		StationName:        stop.StationName,
 		StopSequence:       int64(stop.StopSequence),
-		StopType:           strPtr(stop.StopType),
-		ScheduledArrival:   timePtr(stop.ScheduledArrival),
-		ScheduledDeparture: timePtr(stop.ScheduledDeparture),
-		ActualArrival:      timePtr(stop.ActualArrival),
-		ActualDeparture:    timePtr(stop.ActualDeparture),
-		ArrivalDelay:       int64Ptr(stop.ArrivalDelay),
-		DepartureDelay:     int64Ptr(stop.DepartureDelay),
-		Platform:           strPtr(stop.Platform),
-		IsSuppressed:       boolToInt64Ptr(stop.IsSuppressed),
-		LastObservationAt:  timePtr(stop.LastObservationAt),
+		StopType:           nullable.StrPtr(stop.StopType),
+		ScheduledArrival:   nullable.TimePtr(stop.ScheduledArrival),
+		ScheduledDeparture: nullable.TimePtr(stop.ScheduledDeparture),
+		ActualArrival:      nullable.TimePtr(stop.ActualArrival),
+		ActualDeparture:    nullable.TimePtr(stop.ActualDeparture),
+		ArrivalDelay:       nullable.Int64Ptr(stop.ArrivalDelay),
+		DepartureDelay:     nullable.Int64Ptr(stop.DepartureDelay),
+		Platform:           nullable.StrPtr(stop.Platform),
+		IsSuppressed:       nullable.BoolToInt64Ptr(stop.IsSuppressed),
+		LastObservationAt:  nullable.TimePtr(stop.LastObservationAt),
 	}
 }
 
@@ -257,49 +257,4 @@ func convertStopsToValue(stops []*voyage.VoyageStop) []voyage.VoyageStop {
 		result[i] = *stop
 	}
 	return result
-}
-
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func derefStr(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-func timePtr(t *time.Time) *time.Time {
-	return t
-}
-
-func int64Ptr(i int) *int64 {
-	v := int64(i)
-	return &v
-}
-
-func derefInt64(i *int64) int {
-	if i == nil {
-		return 0
-	}
-	return int(*i)
-}
-
-func boolToInt64Ptr(b bool) *int64 {
-	v := int64(0)
-	if b {
-		v = 1
-	}
-	return &v
-}
-
-func derefInt64Bool(i *int64) bool {
-	if i == nil {
-		return false
-	}
-	return *i != 0
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/emiliopalmerini/treni/internal/database/nullable"
 	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/staticdata"
 )
@@ -29,10 +30,10 @@ func (r *SQLiteMetadataRepository) Get(ctx context.Context, entityType string) (
 	return &staticdata.ImportMetadata{
 		EntityType:   row.EntityType,
 		LastImport:   row.LastImport,
-		RecordCount:  int(deref(row.RecordCount)),
-		DurationMs:   deref(row.ImportDurationMs),
-		Status:       deref(row.Status),
-		ErrorMessage: deref(row.ErrorMessage),
+		RecordCount:  int(nullable.Deref(row.RecordCount)),
+		DurationMs:   nullable.Deref(row.ImportDurationMs),
+		Status:       nullable.Deref(row.Status),
+		ErrorMessage: nullable.Deref(row.ErrorMessage),
 	}, nil
 }
 
@@ -40,10 +41,10 @@ func (r *SQLiteMetadataRepository) Upsert(ctx context.Context, meta *staticdata.
 	return r.q.UpsertImportMetadata(ctx, sqlc.UpsertImportMetadataParams{
 		EntityType:       meta.EntityType,
 		LastImport:       meta.LastImport,
-		RecordCount:      ptr(int64(meta.RecordCount)),
-		ImportDurationMs: ptr(meta.DurationMs),
-		Status:           ptr(meta.Status),
-		ErrorMessage:     ptr(meta.ErrorMessage),
+		RecordCount:      nullable.Ptr(int64(meta.RecordCount)),
+		ImportDurationMs: nullable.Ptr(meta.DurationMs),
+		Status:           nullable.Ptr(meta.Status),
+		ErrorMessage:     nullable.Ptr(meta.ErrorMessage),
 	})
 }
 
@@ -57,16 +58,4 @@ func (r *SQLiteMetadataRepository) ShouldRefresh(ctx context.Context, entityType
 	}
 
 	return time.Since(meta.LastImport) > maxAge, nil
-}
-
-func ptr[T any](v T) *T {
-	return &v
-}
-
-func deref[T any](p *T) T {
-	var zero T
-	if p == nil {
-		return zero
-	}
-	return *p
 }

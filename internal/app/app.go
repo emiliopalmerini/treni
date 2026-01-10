@@ -15,6 +15,9 @@ type Config struct {
 	StationStalenessAge   time.Duration `envconfig:"STATION_STALENESS_AGE" default:"720h"` // 30 days
 	AutoImportEnabled     bool          `envconfig:"AUTO_IMPORT_ENABLED" default:"true"`
 	ImportRefreshInterval time.Duration `envconfig:"IMPORT_REFRESH_INTERVAL" default:"168h"` // 7 days
+
+	// Geolocation settings
+	NearbyStationDistanceKm float64 `envconfig:"NEARBY_STATION_DISTANCE_KM" default:"5.0"`
 }
 
 func New() (*Config, error) {

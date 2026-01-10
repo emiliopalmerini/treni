@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/emiliopalmerini/treni/internal/database/nullable"
 	"github.com/emiliopalmerini/treni/internal/database/sqlc"
 	"github.com/emiliopalmerini/treni/internal/observation"
 )
@@ -35,7 +36,7 @@ func (r *SQLiteRepository) UpsertBatch(ctx context.Context, entities []*observat
 			TrainNumber:     int64(entity.TrainNumber),
 			StationID:       entity.StationID,
 			ObservationType: string(entity.ObservationType),
-			ScheduledDate:   strPtr(entity.ScheduledTime.Format("2006-01-02")),
+			ScheduledDate:   nullable.StrPtr(entity.ScheduledTime.Format("2006-01-02")),
 		})
 
 		var previousDelay *int64
@@ -80,9 +81,9 @@ func (r *SQLiteRepository) GetGlobalStats(ctx context.Context) (*observation.Glo
 
 	stats := &observation.GlobalStats{
 		TotalObservations: int(row.TotalObservations),
-		AverageDelay:      toFloat64(row.AverageDelay),
-		OnTimeCount:       int(deref(row.OnTimeCount)),
-		CancelledCount:    int(deref(row.CancelledCount)),
+		AverageDelay:      nullable.ToFloat64(row.AverageDelay),
+		OnTimeCount:       int(nullable.Deref(row.OnTimeCount)),
+		CancelledCount:    int(nullable.Deref(row.CancelledCount)),
 	}
 
 	if stats.TotalObservations > 0 {
@@ -101,9 +102,9 @@ func (r *SQLiteRepository) GetStatsByCategory(ctx context.Context) ([]*observati
 	stats := make([]*observation.CategoryStats, len(rows))
 	for i, row := range rows {
 		stats[i] = &observation.CategoryStats{
-			Category:         deref(row.Category),
+			Category:         nullable.Deref(row.Category),
 			ObservationCount: int(row.ObservationCount),
-			AverageDelay:     toFloat64(row.AverageDelay),
+			AverageDelay:     nullable.ToFloat64(row.AverageDelay),
 			OnTimePercentage: float64(row.OnTimePercentage),
 		}
 	}
@@ -123,7 +124,7 @@ func (r *SQLiteRepository) GetStatsByStation(ctx context.Context, stationID stri
 		StationID:        row.StationID,
 		StationName:      row.StationName,
 		ObservationCount: int(row.ObservationCount),
-		AverageDelay:     toFloat64(row.AverageDelay),
+		AverageDelay:     nullable.ToFloat64(row.AverageDelay),
 		OnTimePercentage: float64(row.OnTimePercentage),
 	}, nil
 }
@@ -139,14 +140,14 @@ func (r *SQLiteRepository) GetStatsByTrain(ctx context.Context, trainNumber int)
 
 	return &observation.TrainStats{
 		TrainNumber:      int(row.TrainNumber),
-		Category:         deref(row.Category),
-		OriginID:         deref(row.OriginID),
-		OriginName:       deref(row.OriginName),
-		DestinationID:    deref(row.DestinationID),
-		DestinationName:  deref(row.DestinationName),
+		Category:         nullable.Deref(row.Category),
+		OriginID:         nullable.Deref(row.OriginID),
+		OriginName:       nullable.Deref(row.OriginName),
+		DestinationID:    nullable.Deref(row.DestinationID),
+		DestinationName:  nullable.Deref(row.DestinationName),
 		ObservationCount: int(row.ObservationCount),
-		AverageDelay:     toFloat64(row.AverageDelay),
-		MaxDelay:         toInt(row.MaxDelay),
+		AverageDelay:     nullable.ToFloat64(row.AverageDelay),
+		MaxDelay:         nullable.ToInt(row.MaxDelay),
 		OnTimePercentage: float64(row.OnTimePercentage),
 	}, nil
 }
@@ -161,14 +162,14 @@ func (r *SQLiteRepository) GetWorstTrains(ctx context.Context, limit int) ([]*ob
 	for i, row := range rows {
 		stats[i] = &observation.TrainStats{
 			TrainNumber:      int(row.TrainNumber),
-			Category:         deref(row.Category),
-			OriginID:         deref(row.OriginID),
-			OriginName:       deref(row.OriginName),
-			DestinationID:    deref(row.DestinationID),
-			DestinationName:  deref(row.DestinationName),
+			Category:         nullable.Deref(row.Category),
+			OriginID:         nullable.Deref(row.OriginID),
+			OriginName:       nullable.Deref(row.OriginName),
+			DestinationID:    nullable.Deref(row.DestinationID),
+			DestinationName:  nullable.Deref(row.DestinationName),
 			ObservationCount: int(row.ObservationCount),
-			AverageDelay:     toFloat64(row.AverageDelay),
-			MaxDelay:         toInt(row.MaxDelay),
+			AverageDelay:     nullable.ToFloat64(row.AverageDelay),
+			MaxDelay:         nullable.ToInt(row.MaxDelay),
 			OnTimePercentage: float64(row.OnTimePercentage),
 		}
 	}
@@ -187,7 +188,7 @@ func (r *SQLiteRepository) GetWorstStations(ctx context.Context, limit int) ([]*
 			StationID:        row.StationID,
 			StationName:      row.StationName,
 			ObservationCount: int(row.ObservationCount),
-			AverageDelay:     toFloat64(row.AverageDelay),
+			AverageDelay:     nullable.ToFloat64(row.AverageDelay),
 			OnTimePercentage: float64(row.OnTimePercentage),
 		}
 	}
@@ -233,58 +234,6 @@ func (r *SQLiteRepository) GetDelayVariations(ctx context.Context, observationID
 	return variations, nil
 }
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
-func deref[T any](p *T) T {
-	var zero T
-	if p == nil {
-		return zero
-	}
-	return *p
-}
-
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-func timePtr(t time.Time) *time.Time {
-	if t.IsZero() {
-		return nil
-	}
-	return &t
-}
-
-func toFloat64(v interface{}) float64 {
-	switch val := v.(type) {
-	case float64:
-		return val
-	case int64:
-		return float64(val)
-	case int:
-		return float64(val)
-	default:
-		return 0
-	}
-}
-
-func toInt(v interface{}) int {
-	switch val := v.(type) {
-	case float64:
-		return int(val)
-	case int64:
-		return int(val)
-	case int:
-		return val
-	default:
-		return 0
-	}
-}
-
 func observationToUpsertParams(entity *observation.TrainObservation) sqlc.UpsertObservationParams {
 	return sqlc.UpsertObservationParams{
 		ID:               entity.ID.String(),
@@ -293,16 +242,16 @@ func observationToUpsertParams(entity *observation.TrainObservation) sqlc.Upsert
 		StationName:      entity.StationName,
 		ObservationType:  string(entity.ObservationType),
 		TrainNumber:      int64(entity.TrainNumber),
-		TrainCategory:    strPtr(entity.TrainCategory),
-		OriginID:         strPtr(entity.OriginID),
-		OriginName:       strPtr(entity.OriginName),
-		DestinationID:    strPtr(entity.DestinationID),
-		DestinationName:  strPtr(entity.DestinationName),
-		ScheduledTime:    timePtr(entity.ScheduledTime),
-		ScheduledDate:    strPtr(entity.ScheduledTime.Format("2006-01-02")),
-		Delay:            ptr(int64(entity.Delay)),
-		Platform:         strPtr(entity.Platform),
-		CirculationState: ptr(int64(entity.CirculationState)),
+		TrainCategory:    nullable.StrPtr(entity.TrainCategory),
+		OriginID:         nullable.StrPtr(entity.OriginID),
+		OriginName:       nullable.StrPtr(entity.OriginName),
+		DestinationID:    nullable.StrPtr(entity.DestinationID),
+		DestinationName:  nullable.StrPtr(entity.DestinationName),
+		ScheduledTime:    nullable.TimePtrFromValue(entity.ScheduledTime),
+		ScheduledDate:    nullable.StrPtr(entity.ScheduledTime.Format("2006-01-02")),
+		Delay:            nullable.Ptr(int64(entity.Delay)),
+		Platform:         nullable.StrPtr(entity.Platform),
+		CirculationState: nullable.Ptr(int64(entity.CirculationState)),
 	}
 }
 
@@ -317,15 +266,15 @@ func recentRowsToObservations(rows []sqlc.GetRecentObservationsRow) []*observati
 			StationName:      row.StationName,
 			ObservationType:  observation.ObservationType(row.ObservationType),
 			TrainNumber:      int(row.TrainNumber),
-			TrainCategory:    deref(row.TrainCategory),
-			OriginID:         deref(row.OriginID),
-			OriginName:       deref(row.OriginName),
-			DestinationID:    deref(row.DestinationID),
-			DestinationName:  deref(row.DestinationName),
-			ScheduledTime:    deref(row.ScheduledTime),
-			Delay:            int(deref(row.Delay)),
-			Platform:         deref(row.Platform),
-			CirculationState: int(deref(row.CirculationState)),
+			TrainCategory:    nullable.Deref(row.TrainCategory),
+			OriginID:         nullable.Deref(row.OriginID),
+			OriginName:       nullable.Deref(row.OriginName),
+			DestinationID:    nullable.Deref(row.DestinationID),
+			DestinationName:  nullable.Deref(row.DestinationName),
+			ScheduledTime:    nullable.Deref(row.ScheduledTime),
+			Delay:            int(nullable.Deref(row.Delay)),
+			Platform:         nullable.Deref(row.Platform),
+			CirculationState: int(nullable.Deref(row.CirculationState)),
 		}
 	}
 	return observations
@@ -342,15 +291,15 @@ func recentByStationRowsToObservations(rows []sqlc.GetRecentObservationsByStatio
 			StationName:      row.StationName,
 			ObservationType:  observation.ObservationType(row.ObservationType),
 			TrainNumber:      int(row.TrainNumber),
-			TrainCategory:    deref(row.TrainCategory),
-			OriginID:         deref(row.OriginID),
-			OriginName:       deref(row.OriginName),
-			DestinationID:    deref(row.DestinationID),
-			DestinationName:  deref(row.DestinationName),
-			ScheduledTime:    deref(row.ScheduledTime),
-			Delay:            int(deref(row.Delay)),
-			Platform:         deref(row.Platform),
-			CirculationState: int(deref(row.CirculationState)),
+			TrainCategory:    nullable.Deref(row.TrainCategory),
+			OriginID:         nullable.Deref(row.OriginID),
+			OriginName:       nullable.Deref(row.OriginName),
+			DestinationID:    nullable.Deref(row.DestinationID),
+			DestinationName:  nullable.Deref(row.DestinationName),
+			ScheduledTime:    nullable.Deref(row.ScheduledTime),
+			Delay:            int(nullable.Deref(row.Delay)),
+			Platform:         nullable.Deref(row.Platform),
+			CirculationState: int(nullable.Deref(row.CirculationState)),
 		}
 	}
 	return observations
