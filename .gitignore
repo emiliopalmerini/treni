@@ -1,20 +1,13 @@
 # Binaries
+treni
+trenid
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
 
-# Test binary
-*.test
-
-# Output
-/bin/
-/dist/
-
-# Go workspace
-go.work
-go.work.sum
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 
 # IDE
 .idea/
@@ -26,24 +19,13 @@ go.work.sum
 .DS_Store
 Thumbs.db
 
+# Build
+dist/
+bin/
+
 # Environment
 .env
 .env.local
 
 # Generated
-/gen/
-
-# Database
-*.db
-*.db-journal
-*.db-shm
-*.db-wal
-
-# Binary
-/treni
-
-# Claude
-.claude/
-
-# Nix build output
-result
+*_templ.go

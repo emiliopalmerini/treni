@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(templ generate:*)",
+      "Bash(go build:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)",
+      "Bash(make build:*)",
+      "Bash(xargs:*)",
+      "Bash(make generate:*)",
+      "Bash(make test:*)",
+      "Bash(tree:*)",
+      "Bash(go mod init:*)"
+    ]
+  }
+}
