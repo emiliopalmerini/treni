@@ -29,3 +29,5 @@ bin/
 
 # Generated
 *_templ.go
+
+.claude
