@@ -5,7 +5,7 @@ sql:
     schema: "internal/storage/migrations"
     gen:
       go:
-        package: "storage"
-        out: "internal/storage/generated"
+        package: "sqlc"
+        out: "internal/storage/sqlc"
         emit_json_tags: true
         emit_empty_slices: true

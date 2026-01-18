@@ -13,11 +13,11 @@ type DB struct {
 }
 
 func New() (*DB, error) {
-	url := os.Getenv("TURSO_DATABASE_URL")
-	token := os.Getenv("TURSO_AUTH_TOKEN")
+	url := os.Getenv("TRENI_DATABASE_URL")
+	token := os.Getenv("TRENI_AUTH_TOKEN")
 
 	if url == "" {
-		return nil, fmt.Errorf("TURSO_DATABASE_URL not set")
+		return nil, fmt.Errorf("TRENI_DATABASE_URL not set")
 	}
 
 	var dsn string

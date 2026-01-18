@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: stations.sql
 
-package storage
+package sqlc
 
 import (
 	"context"

@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: delay_records.sql
 
-package storage
+package sqlc
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 const getDelayRecordsByDateRange = `-- name: GetDelayRecordsByDateRange :many
 SELECT id, train_number, train_category, origin, destination, date, delay, cancelled, source, recorded_at FROM delay_records
-WHERE date BETWEEN ? AND ?
+WHERE date BETWEEN ?1 AND ?2
 ORDER BY date DESC, train_number
 `
 
@@ -98,8 +98,8 @@ func (q *Queries) GetDelayRecordsByTrain(ctx context.Context, trainNumber string
 
 const getDelayRecordsByTrainInRange = `-- name: GetDelayRecordsByTrainInRange :many
 SELECT id, train_number, train_category, origin, destination, date, delay, cancelled, source, recorded_at FROM delay_records
-WHERE train_number = ?
-AND date BETWEEN ? AND ?
+WHERE train_number = ?1
+AND date BETWEEN ?2 AND ?3
 ORDER BY date DESC
 `
 
@@ -147,17 +147,17 @@ SELECT
     AVG(delay) as avg_delay,
     MAX(delay) as max_delay
 FROM delay_records
-WHERE date BETWEEN ? AND ?
+WHERE date BETWEEN ?1 AND ?2
 AND cancelled = FALSE
 GROUP BY train_number, train_category, origin, destination
 ORDER BY avg_delay DESC
-LIMIT ?
+LIMIT ?3
 `
 
 type GetMostDelayedTrainsParams struct {
-	Date   time.Time `json:"date"`
-	Date_2 time.Time `json:"date_2"`
-	Limit  int64     `json:"limit"`
+	FromDate   time.Time `json:"from_date"`
+	ToDate     time.Time `json:"to_date"`
+	LimitCount int64     `json:"limit_count"`
 }
 
 type GetMostDelayedTrainsRow struct {
@@ -171,7 +171,7 @@ type GetMostDelayedTrainsRow struct {
 }
 
 func (q *Queries) GetMostDelayedTrains(ctx context.Context, arg GetMostDelayedTrainsParams) ([]GetMostDelayedTrainsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostDelayedTrains, arg.Date, arg.Date_2, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, getMostDelayedTrains, arg.FromDate, arg.ToDate, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
@@ -211,18 +211,18 @@ SELECT
     AVG(delay) as avg_delay,
     SUM(CASE WHEN delay <= 5 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_rate
 FROM delay_records
-WHERE date BETWEEN ? AND ?
+WHERE date BETWEEN ?1 AND ?2
 AND cancelled = FALSE
 GROUP BY train_number, train_category, origin, destination
 HAVING COUNT(*) >= 5
 ORDER BY on_time_rate DESC, avg_delay ASC
-LIMIT ?
+LIMIT ?3
 `
 
 type GetMostReliableTrainsParams struct {
-	Date   time.Time `json:"date"`
-	Date_2 time.Time `json:"date_2"`
-	Limit  int64     `json:"limit"`
+	FromDate   time.Time `json:"from_date"`
+	ToDate     time.Time `json:"to_date"`
+	LimitCount int64     `json:"limit_count"`
 }
 
 type GetMostReliableTrainsRow struct {
@@ -236,7 +236,7 @@ type GetMostReliableTrainsRow struct {
 }
 
 func (q *Queries) GetMostReliableTrains(ctx context.Context, arg GetMostReliableTrainsParams) ([]GetMostReliableTrainsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMostReliableTrains, arg.Date, arg.Date_2, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, getMostReliableTrains, arg.FromDate, arg.ToDate, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,6 @@ SELECT
     MAX(CASE WHEN cancelled = FALSE THEN delay ELSE NULL END) as max_delay
 FROM delay_records
 WHERE train_number = ?
-AND date BETWEEN ? AND ?
 GROUP BY train_number
 `
 
