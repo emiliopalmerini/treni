@@ -1,0 +1,122 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/emiliopalmerini/treni/internal/domain"
+	"github.com/emiliopalmerini/treni/internal/service"
+)
+
+templ TrainPage(result *service.TrainResult) {
+	@Layout(result.Train.Category + " " + result.Train.Number) {
+		<div class="train-header">
+			<div class="train-title">
+				<h1>{ result.Train.Category } { result.Train.Number }</h1>
+				<p class="route">{ result.Train.Origin } &rarr; { result.Train.Destination }</p>
+			</div>
+		</div>
+		<div
+			id="train-status"
+			hx-get={ "/api/train/" + result.Train.Number + "/status" }
+			hx-trigger="every 60s"
+			hx-swap="innerHTML"
+		>
+			@TrainStatusPartial(result.Train)
+		</div>
+		if result.Stats != nil && result.Stats.TotalTrips > 0 {
+			@TrainStatsSection(result.Stats)
+		}
+		@StopsList(result.Train.Stops)
+	}
+}
+
+templ TrainStatusPartial(train *domain.Train) {
+	<div class="status-row">
+		@StatusBadge(train.Status)
+		@DelayBadge(train.Delay)
+		if !train.LastUpdate.IsZero() {
+			<span class="last-update">Updated { formatTime(train.LastUpdate) }</span>
+		}
+	</div>
+	<div class="times-row">
+		<div class="time-block">
+			<span class="time-label">Departure</span>
+			<span class="time-value">{ formatTime(train.DepartureTime) }</span>
+		</div>
+		<div class="time-block">
+			<span class="time-label">Arrival</span>
+			<span class="time-value">{ formatTime(train.ArrivalTime) }</span>
+		</div>
+	</div>
+}
+
+templ TrainStatsSection(stats *domain.TrainStats) {
+	<section class="train-stats">
+		<h2>Historical Performance</h2>
+		<div class="stats-grid">
+			<div class="stat-item">
+				<span class="stat-value">{ fmt.Sprintf("%d", stats.TotalTrips) }</span>
+				<span class="stat-label">Total Trips</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-value">{ fmt.Sprintf("%.0f%%", stats.OnTimeRate*100) }</span>
+				<span class="stat-label">On-Time Rate</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-value">{ fmt.Sprintf("%.1f", stats.AverageDelay) } min</span>
+				<span class="stat-label">Avg Delay</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-value">{ fmt.Sprintf("%d", stats.MaxDelay) } min</span>
+				<span class="stat-label">Max Delay</span>
+			</div>
+		</div>
+	</section>
+}
+
+templ StopsList(stops []domain.Stop) {
+	<section class="stops-section">
+		<h2>Stops</h2>
+		<div class="stops-table-wrapper">
+			<table class="stops-table">
+				<thead>
+					<tr>
+						<th>Station</th>
+						<th>Arr</th>
+						<th>Dep</th>
+						<th>Delay</th>
+						<th>Platform</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, stop := range stops {
+						<tr>
+							<td class="station-name">{ stop.StationName }</td>
+							<td>{ formatTime(stop.ScheduledArrival) }</td>
+							<td>{ formatTime(stop.ScheduledDepart) }</td>
+							<td>
+								if stop.DepartureDelay != 0 {
+									@DelayBadge(stop.DepartureDelay)
+								} else if stop.ArrivalDelay != 0 {
+									@DelayBadge(stop.ArrivalDelay)
+								} else {
+									<span class="delay on-time">-</span>
+								}
+							</td>
+							<td>
+								if stop.Platform != "" {
+									if stop.PlatformConfirmed {
+										<span class="platform confirmed">{ stop.Platform }</span>
+									} else {
+										<span class="platform">{ stop.Platform }</span>
+									}
+								} else {
+									<span>-</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}

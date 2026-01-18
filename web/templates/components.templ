@@ -1,0 +1,56 @@
+package templates
+
+import (
+	"fmt"
+	"time"
+	"github.com/emiliopalmerini/treni/internal/domain"
+)
+
+templ DelayBadge(delay int) {
+	if delay > 0 {
+		<span class="delay positive">+{ fmt.Sprintf("%d", delay) } min</span>
+	} else if delay < 0 {
+		<span class="delay negative">{ fmt.Sprintf("%d", delay) } min</span>
+	} else {
+		<span class="delay on-time">On time</span>
+	}
+}
+
+templ StatusBadge(status domain.TrainStatus) {
+	<span class={ "status-badge", statusClass(status) }>
+		{ statusText(status) }
+	</span>
+}
+
+func statusClass(status domain.TrainStatus) string {
+	switch status {
+	case domain.TrainStatusOnTime:
+		return "status-on-time"
+	case domain.TrainStatusDelayed:
+		return "status-delayed"
+	case domain.TrainStatusCancelled:
+		return "status-cancelled"
+	default:
+		return "status-unknown"
+	}
+}
+
+func statusText(status domain.TrainStatus) string {
+	switch status {
+	case domain.TrainStatusOnTime:
+		return "On Time"
+	case domain.TrainStatusDelayed:
+		return "Delayed"
+	case domain.TrainStatusCancelled:
+		return "Cancelled"
+	default:
+		return "Unknown"
+	}
+}
+
+func formatTime(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format("15:04")
+}

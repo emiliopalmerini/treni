@@ -1,6 +1,6 @@
 # Binaries
-treni
-trenid
+/treni
+/trenid
 *.exe
 
 # Database

@@ -1,0 +1,21 @@
+package templates
+
+templ ErrorPage(title string, message string) {
+	@Layout("Error") {
+		<div class="error-page">
+			<h1>{ title }</h1>
+			<p>{ message }</p>
+			<a href="/" class="btn">Go Home</a>
+		</div>
+	}
+}
+
+templ NotFoundPage() {
+	@Layout("Not Found") {
+		<div class="error-page">
+			<h1>404 - Not Found</h1>
+			<p>The page you're looking for doesn't exist.</p>
+			<a href="/" class="btn">Go Home</a>
+		</div>
+	}
+}

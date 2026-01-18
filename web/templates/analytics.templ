@@ -1,0 +1,119 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/emiliopalmerini/treni/internal/service"
+)
+
+templ AnalyticsPage() {
+	@Layout("Analytics") {
+		<div class="analytics-header">
+			<h1>Train Analytics</h1>
+			<p>Performance data from the last 30 days</p>
+		</div>
+		<div class="tabs">
+			<button
+				class="tab active"
+				hx-get="/api/analytics/delayed"
+				hx-target="#rankings"
+				hx-swap="innerHTML"
+				onclick="setActiveTab(this)"
+			>
+				Most Delayed
+			</button>
+			<button
+				class="tab"
+				hx-get="/api/analytics/reliable"
+				hx-target="#rankings"
+				hx-swap="innerHTML"
+				onclick="setActiveTab(this)"
+			>
+				Most Reliable
+			</button>
+		</div>
+		<div
+			id="rankings"
+			hx-get="/api/analytics/delayed"
+			hx-trigger="load"
+			hx-swap="innerHTML"
+		>
+			<div class="loading">Loading...</div>
+		</div>
+		<script>
+			function setActiveTab(btn) {
+				document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+				btn.classList.add('active');
+			}
+		</script>
+	}
+}
+
+templ DelayedRankings(trains []service.TrainRanking) {
+	if len(trains) == 0 {
+		<p class="no-data">No data available. Try recording some train delays first.</p>
+	} else {
+		<table class="rankings-table">
+			<thead>
+				<tr>
+					<th>Rank</th>
+					<th>Train</th>
+					<th>Route</th>
+					<th>Trips</th>
+					<th>Avg Delay</th>
+					<th>Max Delay</th>
+				</tr>
+			</thead>
+			<tbody>
+				for i, t := range trains {
+					<tr>
+						<td class="rank">{ fmt.Sprintf("%d", i+1) }</td>
+						<td>
+							<a href={ templ.SafeURL("/train/" + t.TrainNumber) } class="train-link">
+								{ t.Category } { t.TrainNumber }
+							</a>
+						</td>
+						<td class="route">{ t.Origin } &rarr; { t.Destination }</td>
+						<td>{ fmt.Sprintf("%d", t.TripCount) }</td>
+						<td class="delay">{ fmt.Sprintf("%.1f min", t.AvgDelay) }</td>
+						<td class="delay">{ fmt.Sprintf("%d min", t.MaxDelay) }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ ReliableRankings(trains []service.TrainRanking) {
+	if len(trains) == 0 {
+		<p class="no-data">No data available. Trains need at least 5 recorded trips to appear here.</p>
+	} else {
+		<table class="rankings-table">
+			<thead>
+				<tr>
+					<th>Rank</th>
+					<th>Train</th>
+					<th>Route</th>
+					<th>Trips</th>
+					<th>On-Time Rate</th>
+					<th>Avg Delay</th>
+				</tr>
+			</thead>
+			<tbody>
+				for i, t := range trains {
+					<tr>
+						<td class="rank">{ fmt.Sprintf("%d", i+1) }</td>
+						<td>
+							<a href={ templ.SafeURL("/train/" + t.TrainNumber) } class="train-link">
+								{ t.Category } { t.TrainNumber }
+							</a>
+						</td>
+						<td class="route">{ t.Origin } &rarr; { t.Destination }</td>
+						<td>{ fmt.Sprintf("%d", t.TripCount) }</td>
+						<td class="on-time">{ fmt.Sprintf("%.0f%%", t.OnTimeRate) }</td>
+						<td class="delay">{ fmt.Sprintf("%.1f min", t.AvgDelay) }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}

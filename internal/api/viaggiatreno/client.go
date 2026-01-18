@@ -51,6 +51,40 @@ func (c *Client) SearchStation(ctx context.Context, query string) ([]domain.Stat
 	return stations, nil
 }
 
+// Major station names (API doesn't provide a code->name lookup)
+var stationNames = map[string]string{
+	"S01700": "Milano Centrale",
+	"S01645": "Milano Porta Garibaldi",
+	"S01820": "Milano Rogoredo",
+	"S01701": "Milano Lambrate",
+	"S08409": "Roma Termini",
+	"S08217": "Roma Tiburtina",
+	"S05043": "Firenze S.M.N.",
+	"S05031": "Firenze Campo di Marte",
+	"S01307": "Torino Porta Nuova",
+	"S01312": "Torino Porta Susa",
+	"S02430": "Venezia Santa Lucia",
+	"S02593": "Venezia Mestre",
+	"S05704": "Bologna Centrale",
+	"S06004": "Napoli Centrale",
+	"S09218": "Palermo Centrale",
+	"S11102": "Genova Piazza Principe",
+	"S11106": "Genova Brignole",
+	"S06800": "Bari Centrale",
+}
+
+func (c *Client) GetStationInfo(ctx context.Context, stationCode string) (*domain.Station, error) {
+	name := stationCode
+	if n, ok := stationNames[stationCode]; ok {
+		name = n
+	}
+
+	return &domain.Station{
+		Code: stationCode,
+		Name: name,
+	}, nil
+}
+
 func (c *Client) GetStationRegion(ctx context.Context, stationCode string) (int, error) {
 	endpoint := fmt.Sprintf("%s/regione/%s", c.baseURL, url.PathEscape(stationCode))
 
@@ -125,6 +159,13 @@ func (c *Client) GetArrivals(ctx context.Context, stationCode string) ([]domain.
 }
 
 func (c *Client) GetStation(ctx context.Context, stationCode string) (*domain.Station, error) {
+	// Get station info first
+	info, err := c.GetStationInfo(ctx, stationCode)
+	if err != nil {
+		// Fall back to just code if info unavailable
+		info = &domain.Station{Code: stationCode}
+	}
+
 	arrivals, err := c.GetArrivals(ctx, stationCode)
 	if err != nil {
 		return nil, err
@@ -135,11 +176,10 @@ func (c *Client) GetStation(ctx context.Context, stationCode string) (*domain.St
 		return nil, err
 	}
 
-	return &domain.Station{
-		Code:       stationCode,
-		Arrivals:   arrivals,
-		Departures: departures,
-	}, nil
+	info.Arrivals = arrivals
+	info.Departures = departures
+
+	return info, nil
 }
 
 func (c *Client) FindTrainOrigin(ctx context.Context, trainNumber string) (string, int64, error) {

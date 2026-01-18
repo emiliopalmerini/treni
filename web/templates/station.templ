@@ -1,0 +1,138 @@
+package templates
+
+import (
+	"github.com/emiliopalmerini/treni/internal/domain"
+)
+
+templ StationPage(station *domain.Station) {
+	@Layout(station.Name) {
+		<div class="station-header">
+			<h1>{ station.Name }</h1>
+			<span class="station-code">{ station.Code }</span>
+		</div>
+		<div class="tabs">
+			<button
+				class="tab active"
+				hx-get={ "/api/station/" + station.Code + "/departures" }
+				hx-target="#board"
+				hx-swap="innerHTML"
+				onclick="setActiveTab(this)"
+			>
+				Departures
+			</button>
+			<button
+				class="tab"
+				hx-get={ "/api/station/" + station.Code + "/arrivals" }
+				hx-target="#board"
+				hx-swap="innerHTML"
+				onclick="setActiveTab(this)"
+			>
+				Arrivals
+			</button>
+		</div>
+		<div
+			id="board"
+			hx-get={ "/api/station/" + station.Code + "/departures" }
+			hx-trigger="load"
+			hx-swap="innerHTML"
+		>
+			<div class="loading">Loading...</div>
+		</div>
+		<script>
+			function setActiveTab(btn) {
+				document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+				btn.classList.add('active');
+			}
+		</script>
+	}
+}
+
+templ DeparturesPartial(departures []domain.Departure, stationCode string) {
+	<div
+		hx-get={ "/api/station/" + stationCode + "/departures" }
+		hx-trigger="every 60s"
+		hx-swap="outerHTML"
+	>
+		if len(departures) == 0 {
+			<p class="no-data">No departures at this time</p>
+		} else {
+			<table class="board-table">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Train</th>
+						<th>Destination</th>
+						<th>Delay</th>
+						<th>Platform</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, d := range departures {
+						<tr>
+							<td class="time">{ formatTime(d.ScheduledTime) }</td>
+							<td>
+								<a href={ templ.SafeURL("/train/" + d.TrainNumber) } class="train-link">
+									{ d.TrainCategory } { d.TrainNumber }
+								</a>
+							</td>
+							<td>{ d.Destination }</td>
+							<td>@DelayBadge(d.Delay)</td>
+							<td>
+								if d.Platform != "" {
+									<span class="platform">{ d.Platform }</span>
+								} else {
+									<span>-</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+}
+
+templ ArrivalsPartial(arrivals []domain.Arrival, stationCode string) {
+	<div
+		hx-get={ "/api/station/" + stationCode + "/arrivals" }
+		hx-trigger="every 60s"
+		hx-swap="outerHTML"
+	>
+		if len(arrivals) == 0 {
+			<p class="no-data">No arrivals at this time</p>
+		} else {
+			<table class="board-table">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Train</th>
+						<th>Origin</th>
+						<th>Delay</th>
+						<th>Platform</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, a := range arrivals {
+						<tr>
+							<td class="time">{ formatTime(a.ScheduledTime) }</td>
+							<td>
+								<a href={ templ.SafeURL("/train/" + a.TrainNumber) } class="train-link">
+									{ a.TrainCategory } { a.TrainNumber }
+								</a>
+							</td>
+							<td>{ a.Origin }</td>
+							<td>@DelayBadge(a.Delay)</td>
+							<td>
+								if a.Platform != "" {
+									<span class="platform">{ a.Platform }</span>
+								} else {
+									<span>-</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+}

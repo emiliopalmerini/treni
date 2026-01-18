@@ -1,0 +1,74 @@
+package templates
+
+import "github.com/emiliopalmerini/treni/internal/domain"
+
+templ HomePage() {
+	@Layout("Home") {
+		<section class="hero">
+			<h1>Track Italian Trains</h1>
+			<p>Real-time train status and historical analytics</p>
+			@SearchBox()
+		</section>
+		<section class="quick-links">
+			<h2>Quick Links</h2>
+			<div class="links-grid">
+				<a href="/station/S01700" class="link-card">
+					<span class="link-title">Milano Centrale</span>
+					<span class="link-code">S01700</span>
+				</a>
+				<a href="/station/S08409" class="link-card">
+					<span class="link-title">Roma Termini</span>
+					<span class="link-code">S08409</span>
+				</a>
+				<a href="/station/S01307" class="link-card">
+					<span class="link-title">Torino P.N.</span>
+					<span class="link-code">S01307</span>
+				</a>
+				<a href="/station/S05043" class="link-card">
+					<span class="link-title">Firenze S.M.N.</span>
+					<span class="link-code">S05043</span>
+				</a>
+			</div>
+		</section>
+	}
+}
+
+templ SearchBox() {
+	<div class="search-box">
+		<form action="/search" method="GET" class="search-form">
+			<input
+				type="text"
+				name="q"
+				placeholder="Search train number or station..."
+				autocomplete="off"
+				hx-get="/api/search"
+				hx-trigger="keyup changed delay:300ms"
+				hx-target="#search-results"
+			/>
+			<button type="submit">Search</button>
+		</form>
+		<div id="search-results" class="search-results"></div>
+	</div>
+}
+
+templ SearchResults(stations []domain.Station, query string) {
+	if len(stations) > 0 {
+		<ul class="suggestions">
+			for _, s := range stations {
+				<li>
+					<a href={ templ.SafeURL("/station/" + s.Code) }>
+						<span class="station-name">{ s.Name }</span>
+						<span class="station-code">{ s.Code }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	} else if query != "" {
+		<div class="no-results">
+			<p>No stations found. Try searching for a train number:</p>
+			<a href={ templ.SafeURL("/train/" + query) } class="train-link">
+				View train { query }
+			</a>
+		</div>
+	}
+}
