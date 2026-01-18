@@ -8,38 +8,38 @@ type stationSearchResult struct {
 }
 
 type departureResult struct {
-	NumeroTreno                            int    `json:"numeroTreno"`
-	CategoriaDescrizione                   string `json:"categoriaDescrizione"`
-	Destinazione                           string `json:"destinazione"`
-	OrarioPartenza                         int64  `json:"orarioPartenza"`
-	Ritardo                                int    `json:"ritardo"`
-	BinarioProgrammatoPartenzaDescrizione  string `json:"binarioProgrammatoPartenzaDescrizione"`
-	BinarioEffettivoPartenzaDescrizione    string `json:"binarioEffettivoPartenzaDescrizione"`
-	Provvedimento                          int    `json:"provvedimento"`
+	NumeroTreno                           int    `json:"numeroTreno"`
+	CategoriaDescrizione                  string `json:"categoriaDescrizione"`
+	Destinazione                          string `json:"destinazione"`
+	OrarioPartenza                        int64  `json:"orarioPartenza"`
+	Ritardo                               int    `json:"ritardo"`
+	BinarioProgrammatoPartenzaDescrizione string `json:"binarioProgrammatoPartenzaDescrizione"`
+	BinarioEffettivoPartenzaDescrizione   string `json:"binarioEffettivoPartenzaDescrizione"`
+	Provvedimento                         int    `json:"provvedimento"`
 }
 
 type arrivalResult struct {
-	NumeroTreno                          int    `json:"numeroTreno"`
-	CategoriaDescrizione                 string `json:"categoriaDescrizione"`
-	Origine                              string `json:"origine"`
-	OrarioArrivo                         int64  `json:"orarioArrivo"`
-	Ritardo                              int    `json:"ritardo"`
-	BinarioProgrammatoArrivoDescrizione  string `json:"binarioProgrammatoArrivoDescrizione"`
-	BinarioEffettivoArrivoDescrizione    string `json:"binarioEffettivoArrivoDescrizione"`
-	Provvedimento                        int    `json:"provvedimento"`
+	NumeroTreno                         int    `json:"numeroTreno"`
+	CategoriaDescrizione                string `json:"categoriaDescrizione"`
+	Origine                             string `json:"origine"`
+	OrarioArrivo                        int64  `json:"orarioArrivo"`
+	Ritardo                             int    `json:"ritardo"`
+	BinarioProgrammatoArrivoDescrizione string `json:"binarioProgrammatoArrivoDescrizione"`
+	BinarioEffettivoArrivoDescrizione   string `json:"binarioEffettivoArrivoDescrizione"`
+	Provvedimento                       int    `json:"provvedimento"`
 }
 
 type trainResult struct {
-	NumeroTreno           int           `json:"numeroTreno"`
-	Categoria             string        `json:"categoria"`
-	Origine               string        `json:"origine"`
-	Destinazione          string        `json:"destinazione"`
-	OrarioPartenza        int64         `json:"orarioPartenza"`
-	OrarioArrivo          int64         `json:"orarioArrivo"`
-	Ritardo               int           `json:"ritardo"`
-	Provvedimento         int           `json:"provvedimento"`
-	OraUltimoRilevamento  int64         `json:"oraUltimoRilevamento"`
-	Fermate               []stopResult  `json:"fermate"`
+	NumeroTreno          int          `json:"numeroTreno"`
+	Categoria            string       `json:"categoria"`
+	Origine              string       `json:"origine"`
+	Destinazione         string       `json:"destinazione"`
+	OrarioPartenza       int64        `json:"orarioPartenza"`
+	OrarioArrivo         int64        `json:"orarioArrivo"`
+	Ritardo              int          `json:"ritardo"`
+	Provvedimento        int          `json:"provvedimento"`
+	OraUltimoRilevamento int64        `json:"oraUltimoRilevamento"`
+	Fermate              []stopResult `json:"fermate"`
 }
 
 type stopResult struct {

@@ -549,4 +549,3 @@ func topCmd(args []string) {
 		os.Exit(1)
 	}
 }
-
