@@ -6,22 +6,6 @@ ON CONFLICT(train_number, date, source) DO UPDATE SET
     cancelled = excluded.cancelled,
     recorded_at = CURRENT_TIMESTAMP;
 
--- name: GetDelayRecordsByTrain :many
-SELECT * FROM delay_records
-WHERE train_number = ?
-ORDER BY date DESC;
-
--- name: GetDelayRecordsByTrainInRange :many
-SELECT * FROM delay_records
-WHERE train_number = sqlc.arg(train_number)
-AND date BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date)
-ORDER BY date DESC;
-
--- name: GetDelayRecordsByDateRange :many
-SELECT * FROM delay_records
-WHERE date BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date)
-ORDER BY date DESC, train_number;
-
 -- name: GetTrainStats :one
 SELECT
     train_number,
@@ -34,36 +18,3 @@ SELECT
 FROM delay_records
 WHERE train_number = ?
 GROUP BY train_number;
-
--- name: GetMostDelayedTrains :many
-SELECT
-    train_number,
-    train_category,
-    origin,
-    destination,
-    COUNT(*) as trip_count,
-    AVG(delay) as avg_delay,
-    MAX(delay) as max_delay
-FROM delay_records
-WHERE date BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date)
-AND cancelled = FALSE
-GROUP BY train_number, train_category, origin, destination
-ORDER BY avg_delay DESC
-LIMIT sqlc.arg(limit_count);
-
--- name: GetMostReliableTrains :many
-SELECT
-    train_number,
-    train_category,
-    origin,
-    destination,
-    COUNT(*) as trip_count,
-    AVG(delay) as avg_delay,
-    SUM(CASE WHEN delay <= 5 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as on_time_rate
-FROM delay_records
-WHERE date BETWEEN sqlc.arg(from_date) AND sqlc.arg(to_date)
-AND cancelled = FALSE
-GROUP BY train_number, train_category, origin, destination
-HAVING COUNT(*) >= 5
-ORDER BY on_time_rate DESC, avg_delay ASC
-LIMIT sqlc.arg(limit_count);

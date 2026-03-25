@@ -1,9 +1,7 @@
-.PHONY: all build build-cli build-server test test-unit test-integration clean sqlc templ fmt lint run serve migrate reset install help
+.PHONY: all build test test-unit test-integration clean sqlc templ fmt lint run serve migrate reset install help
 
 # Variables
-CLI_BINARY := treni
-SERVER_BINARY := trenid
-BUILD_DIR := .
+BINARY := trenid
 GO_FILES := $(shell find . -name '*.go' -not -path './sqlc/generated/*')
 TEMPL_FILES := $(shell find . -name '*.templ')
 SQL_FILES := $(shell find . -path '*/queries/*.sql' 2>/dev/null)
@@ -26,25 +24,16 @@ generate: sqlc templ
 
 # === Build ===
 
-# Build both binaries (depends on generated code)
-build: generate build-cli build-server
-
-# Build CLI only
-build-cli:
-	go build -o $(CLI_BINARY) ./cmd/treni
-
-# Build server only
-build-server:
-	go build -o $(SERVER_BINARY) ./cmd/trenid
+# Build server (depends on generated code)
+build: generate
+	go build -o $(BINARY) ./cmd/trenid
 
 # Build with version info
 build-release: generate
-	go build -ldflags="-s -w" -o $(CLI_BINARY) ./cmd/treni
-	go build -ldflags="-s -w" -o $(SERVER_BINARY) ./cmd/trenid
+	go build -ldflags="-s -w" -o $(BINARY) ./cmd/trenid
 
 # Install to GOPATH/bin
 install: generate
-	go install ./cmd/treni
 	go install ./cmd/trenid
 
 # === Testing ===
@@ -87,22 +76,21 @@ check: fmt lint test
 # === Database ===
 
 # Run migrations
-migrate: build-server
-	./$(SERVER_BINARY) migrate
+migrate: build
+	./$(BINARY) migrate
 
 # Reset database (drop all tables)
-reset: build-server
-	./$(SERVER_BINARY) migrate 0
+reset: build
+	./$(BINARY) migrate 0
 
 # === Run ===
 
-# Run the CLI
-run: build-cli
-	./$(CLI_BINARY)
+# Start web server
+run: build
+	./$(BINARY)
 
-# Start web server (for development)
-serve: build-server
-	./$(SERVER_BINARY)
+# Alias
+serve: run
 
 # Development: watch and rebuild
 dev:
@@ -116,7 +104,7 @@ dev:
 
 # Clean build artifacts
 clean:
-	rm -f $(CLI_BINARY) $(SERVER_BINARY)
+	rm -f $(BINARY)
 	rm -f coverage.out coverage.html
 	rm -f *.db *.db-*
 
@@ -128,16 +116,14 @@ clean-all: clean
 # === Help ===
 
 help:
-	@echo "treni - Train tracking application"
+	@echo "treni - Train tracking web application"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Build targets:"
 	@echo "  all             Build everything (default)"
-	@echo "  build           Generate code + build both binaries"
-	@echo "  build-cli       Build CLI only"
-	@echo "  build-server    Build web server only"
-	@echo "  build-release   Generate code + build optimized binaries"
+	@echo "  build           Generate code + build server"
+	@echo "  build-release   Generate code + build optimized binary"
 	@echo "  install         Generate code + install to GOPATH/bin"
 	@echo "  clean           Remove build artifacts"
 	@echo "  clean-all       Remove build + generated code"
@@ -164,6 +150,6 @@ help:
 	@echo "  reset           Build + reset database to version 0"
 	@echo ""
 	@echo "Run:"
-	@echo "  run             Build + run CLI"
-	@echo "  serve           Build + start web server"
+	@echo "  run             Build + start web server"
+	@echo "  serve           Alias for run"
 	@echo "  dev             Watch files and rebuild on changes"
