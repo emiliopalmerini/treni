@@ -2,6 +2,12 @@ package domain
 
 import "time"
 
+// StationRef is a lightweight reference to a saved station (code + display name).
+type StationRef struct {
+	Code string
+	Name string
+}
+
 type Station struct {
 	Code       string
 	Name       string

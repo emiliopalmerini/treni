@@ -54,3 +54,19 @@ func formatTime(t time.Time) string {
 	}
 	return t.Format("15:04")
 }
+
+func delayRowClass(delay int, status domain.TrainStatus) string {
+	if status == domain.TrainStatusCancelled {
+		return "row-cancelled"
+	}
+	switch {
+	case delay <= 0:
+		return "row-on-time"
+	case delay <= 5:
+		return "row-delay-low"
+	case delay <= 15:
+		return "row-delay-mid"
+	default:
+		return "row-delay-high"
+	}
+}

@@ -46,18 +46,19 @@ func main() {
 
 	// Pages
 	r.Get("/", h.Home)
+	r.Get("/add-station", h.AddStation)
 	r.Get("/train/{number}", h.Train)
 	r.Get("/station/{code}", h.Station)
-	r.Get("/analytics", h.Analytics)
 
 	// HTMX API endpoints
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/search", h.Search)
+		r.Get("/pick-station", h.PickStation)
+		r.Get("/remove-station", h.RemoveStation)
 		r.Get("/train/{number}/status", h.TrainStatus)
+		r.Get("/station/{code}/content", h.StationContent)
 		r.Get("/station/{code}/departures", h.StationDepartures)
 		r.Get("/station/{code}/arrivals", h.StationArrivals)
-		r.Get("/analytics/delayed", h.DelayedRankings)
-		r.Get("/analytics/reliable", h.ReliableRankings)
 	})
 
 	// Static files

@@ -1,54 +1,106 @@
 package templates
 
-import "github.com/emiliopalmerini/treni/internal/domain"
+import (
+	"github.com/emiliopalmerini/treni/internal/domain"
+	"net/url"
+)
 
-templ HomePage() {
-	@Layout("Home") {
-		<section class="hero">
-			<h1>Track Italian Trains</h1>
-			<p>Real-time train status and historical analytics</p>
-			@SearchBox()
-		</section>
-		<section class="quick-links">
-			<h2>Quick Links</h2>
-			<div class="links-grid">
-				<a href="/station/S01700" class="link-card">
-					<span class="link-title">Milano Centrale</span>
-					<span class="link-code">S01700</span>
-				</a>
-				<a href="/station/S08409" class="link-card">
-					<span class="link-title">Roma Termini</span>
-					<span class="link-code">S08409</span>
-				</a>
-				<a href="/station/S01307" class="link-card">
-					<span class="link-title">Torino P.N.</span>
-					<span class="link-code">S01307</span>
-				</a>
-				<a href="/station/S05043" class="link-card">
-					<span class="link-title">Firenze S.M.N.</span>
-					<span class="link-code">S05043</span>
-				</a>
-			</div>
+templ StationPickerPage(hasStations bool) {
+	@Layout("Pick Your Station") {
+		<section class="picker">
+			if hasStations {
+				<h1>Add Station</h1>
+				<p>Search for a station to add</p>
+			} else {
+				<h1>Your Station</h1>
+				<p>Search for your station to get started</p>
+			}
+			@PickerSearchBox()
+			if hasStations {
+				<a href="/" class="back-link">Back to dashboard</a>
+			}
 		</section>
 	}
 }
 
-templ SearchBox() {
+templ PickerSearchBox() {
 	<div class="search-box">
-		<form action="/search" method="GET" class="search-form">
-			<input
-				type="text"
-				name="q"
-				placeholder="Search train number or station..."
-				autocomplete="off"
-				hx-get="/api/search"
-				hx-trigger="keyup changed delay:300ms"
-				hx-target="#search-results"
-			/>
-			<button type="submit">Search</button>
-		</form>
+		<input
+			type="text"
+			name="q"
+			placeholder="Search station..."
+			autocomplete="off"
+			hx-get="/api/search?mode=picker"
+			hx-trigger="keyup changed delay:300ms"
+			hx-target="#search-results"
+			hx-include="this"
+		/>
 		<div id="search-results" class="search-results"></div>
 	</div>
+}
+
+templ PickerSearchResults(stations []domain.Station, query string) {
+	if len(stations) > 0 {
+		<ul class="suggestions">
+			for _, s := range stations {
+				<li>
+					<a
+						hx-get={ "/api/pick-station?code=" + s.Code + "&name=" + url.QueryEscape(s.Name) }
+						hx-swap="none"
+						href="#"
+					>
+						<span class="station-name">{ s.Name }</span>
+						<span class="station-code">{ s.Code }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	} else if query != "" {
+		<div class="no-results">
+			<p>No stations found</p>
+		</div>
+	}
+}
+
+templ DashboardPage(saved []domain.StationRef, activeCode string, station *domain.Station) {
+	@Layout(station.Name) {
+		<div class="station-tabs">
+			for _, s := range saved {
+				<div class={ "station-tab", templ.KV("active", s.Code == activeCode) }>
+					<button
+						class="station-tab-name"
+						hx-get={ "/api/station/" + s.Code + "/content" }
+						hx-target="#station-content"
+						hx-swap="innerHTML"
+						onclick="setActiveStationTab(this)"
+					>
+						{ s.Name }
+					</button>
+					<a
+						class="station-tab-remove"
+						hx-get={ "/api/remove-station?code=" + s.Code }
+						hx-swap="none"
+						href="#"
+						title="Remove station"
+					>
+						&times;
+					</a>
+				</div>
+			}
+			if len(saved) < 5 {
+				<a href="/add-station" class="station-tab add-tab">+</a>
+			}
+		</div>
+		<div id="station-content">
+			@StationContentPartial(station)
+		</div>
+		<script>
+			function setActiveStationTab(btn) {
+				document.querySelectorAll('.station-tab').forEach(t => t.classList.remove('active'));
+				btn.closest('.station-tab').classList.add('active');
+			}
+		</script>
+	}
 }
 
 templ SearchResults(stations []domain.Station, query string) {

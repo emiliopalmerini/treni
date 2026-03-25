@@ -40,25 +40,25 @@ a:hover {
 
 /* Layout */
 .container {
-    max-width: 1000px;
+    max-width: 800px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 1rem;
     flex: 1;
 }
 
 /* Navigation */
 .nav {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
 }
 
 .nav-brand {
     font-weight: 700;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     color: var(--color-primary);
 }
 
@@ -66,51 +66,51 @@ a:hover {
     text-decoration: none;
 }
 
-.nav-links {
-    display: flex;
-    gap: 1.5rem;
-}
-
-.nav-links a {
-    color: var(--color-text);
-}
-
-.nav-links a:hover {
-    color: var(--color-primary);
-    text-decoration: none;
-}
-
 /* Footer */
 .footer {
     text-align: center;
-    padding: 1.5rem;
+    padding: 1rem;
     color: var(--color-text-muted);
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     border-top: 1px solid var(--color-border);
     background: var(--color-surface);
 }
 
-/* Hero Section */
-.hero {
+/* Station Picker */
+.picker {
     text-align: center;
-    padding: 3rem 1rem;
+    padding: 3rem 1rem 2rem;
 }
 
-.hero h1 {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+.picker h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
 }
 
-.hero p {
+.picker p {
     color: var(--color-text-muted);
     margin-bottom: 2rem;
+    font-size: 0.9375rem;
 }
 
 /* Search */
 .search-box {
     position: relative;
-    max-width: 500px;
+    max-width: 400px;
     margin: 0 auto;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    outline: none;
+}
+
+.search-box input:focus {
+    border-color: var(--color-primary);
 }
 
 .search-form {
@@ -166,8 +166,9 @@ a:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
     color: var(--color-text);
+    min-height: 48px;
 }
 
 .suggestions li a:hover {
@@ -175,9 +176,13 @@ a:hover {
     text-decoration: none;
 }
 
+.station-name {
+    font-weight: 500;
+}
+
 .station-code {
     color: var(--color-text-muted);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-family: monospace;
 }
 
@@ -191,101 +196,248 @@ a:hover {
     color: var(--color-text-muted);
 }
 
-/* Quick Links */
-.quick-links {
-    margin-top: 3rem;
-}
-
-.quick-links h2 {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-}
-
-.links-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.link-card {
+/* Station Tabs */
+.station-tabs {
     display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    background: var(--color-surface);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+}
+
+.station-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.station-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    color: var(--color-text);
+    background: var(--color-surface);
+    flex-shrink: 0;
 }
 
-.link-card:hover {
+.station-tab.active {
     border-color: var(--color-primary);
+    background: #e8f0fe;
+}
+
+.station-tab-name {
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.station-tab.active .station-tab-name {
+    color: var(--color-primary);
+}
+
+.station-tab-remove {
+    padding: 0.25rem 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.station-tab-remove:hover {
+    color: var(--color-danger);
+    background: #fff5f5;
     text-decoration: none;
 }
 
-.link-title {
+.station-tab.add-tab {
+    padding: 0.5rem 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 1rem;
     font-weight: 500;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
-.link-code {
+.station-tab.add-tab:hover {
+    background: var(--color-bg);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* Board Tabs (Departures/Arrivals) */
+.board-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Back Link */
+.back-link {
+    display: inline-block;
+    margin-top: 1.5rem;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
-    color: var(--color-text-muted);
-    font-family: monospace;
 }
 
-/* Train Page */
-.train-header {
-    margin-bottom: 1.5rem;
+.back-link:hover {
+    color: var(--color-primary);
 }
 
-.train-header h1 {
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
-.train-header .route {
-    color: var(--color-text-muted);
-    font-size: 1.125rem;
+.tab {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+    min-height: 44px;
 }
 
-#train-status {
+.tab:hover {
+    background: var(--color-bg);
+}
+
+.tab.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+/* Board */
+#board {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    overflow: hidden;
 }
 
-.status-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+.board-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.times-row {
-    display: flex;
-    gap: 2rem;
-}
-
-.time-block {
-    display: flex;
-    flex-direction: column;
-}
-
-.time-label {
-    font-size: 0.875rem;
+.board-table th {
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-bg);
+    font-weight: 600;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
-.time-value {
-    font-size: 1.25rem;
+.board-table td {
+    padding: 0.625rem 0.75rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.board-table .time {
+    font-family: monospace;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.train-link {
+    font-weight: 500;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Delay Row Severity */
+.row-on-time {
+    opacity: 0.7;
+}
+
+.row-delay-low {
+    border-left: 3px solid var(--color-warning);
+}
+
+.row-delay-mid {
+    border-left: 3px solid var(--color-danger);
+    font-weight: 500;
+}
+
+.row-delay-high {
+    border-left: 4px solid var(--color-danger);
+    background: #fff5f5;
     font-weight: 600;
 }
 
-.last-update {
+.row-cancelled {
+    background: #f8d7da;
+}
+
+.row-cancelled .time {
+    text-decoration: line-through;
+}
+
+/* Delay Display */
+.delay {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.delay.positive {
+    color: var(--color-danger);
+}
+
+.delay.negative {
+    color: var(--color-success);
+}
+
+.delay.on-time {
+    color: var(--color-success);
+}
+
+.board-table .delay.positive {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Platform */
+.platform {
+    font-family: monospace;
+    background: var(--color-bg);
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
     font-size: 0.875rem;
+}
+
+.platform.confirmed {
+    background: #d1e7dd;
+    color: var(--color-success);
+}
+
+/* Last Refresh */
+.last-refresh {
+    text-align: center;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
-    margin-left: auto;
+    padding: 0.5rem;
+    border-top: 1px solid var(--color-border);
 }
 
 /* Status Badges */
@@ -317,21 +469,60 @@ a:hover {
     color: var(--color-text-muted);
 }
 
-/* Delay Display */
-.delay {
-    font-weight: 500;
+/* Train Page */
+.train-header {
+    margin-bottom: 1.5rem;
 }
 
-.delay.positive {
-    color: var(--color-danger);
+.train-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
 }
 
-.delay.negative {
-    color: var(--color-success);
+.train-header .route {
+    color: var(--color-text-muted);
+    font-size: 1rem;
 }
 
-.delay.on-time {
-    color: var(--color-success);
+#train-status {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.times-row {
+    display: flex;
+    gap: 2rem;
+}
+
+.time-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.time-label {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+.time-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.last-update {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-left: auto;
 }
 
 /* Stats Section */
@@ -339,19 +530,19 @@ a:hover {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
 }
 
 .train-stats h2 {
-    font-size: 1.125rem;
-    margin-bottom: 1rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.75rem;
 }
 
 .stat-item {
@@ -360,13 +551,13 @@ a:hover {
 
 .stat-value {
     display: block;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-primary);
 }
 
 .stat-label {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-muted);
 }
 
@@ -379,8 +570,8 @@ a:hover {
 }
 
 .stops-section h2 {
-    font-size: 1.125rem;
-    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    padding: 0.875rem 1rem;
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -388,23 +579,23 @@ a:hover {
     overflow-x: auto;
 }
 
-.stops-table, .board-table, .rankings-table {
+.stops-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.stops-table th, .board-table th, .rankings-table th {
+.stops-table th {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: 0.625rem 0.75rem;
     background: var(--color-bg);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
     white-space: nowrap;
 }
 
-.stops-table td, .board-table td, .rankings-table td {
-    padding: 0.75rem 1rem;
+.stops-table td {
+    padding: 0.625rem 0.75rem;
     border-top: 1px solid var(--color-border);
 }
 
@@ -412,119 +603,26 @@ a:hover {
     font-weight: 500;
 }
 
-/* Platform */
-.platform {
-    font-family: monospace;
-    background: var(--color-bg);
-    padding: 0.125rem 0.5rem;
-    border-radius: 4px;
-}
-
-.platform.confirmed {
-    background: #d1e7dd;
-    color: var(--color-success);
-}
-
-/* Station Page */
+/* Station Page Header */
 .station-header {
     display: flex;
     align-items: baseline;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.station-header h1 {
-    font-size: 1.75rem;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
     margin-bottom: 1rem;
 }
 
-.tab {
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    background: var(--color-surface);
-    cursor: pointer;
-    font-size: 0.875rem;
-    transition: all 0.15s;
-}
-
-.tab:hover {
-    background: var(--color-bg);
-}
-
-.tab.active {
-    background: var(--color-primary);
-    color: white;
-    border-color: var(--color-primary);
-}
-
-/* Board */
-#board {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    overflow: hidden;
-}
-
-.board-table .time {
-    font-family: monospace;
-    font-weight: 500;
-}
-
-.train-link {
-    font-weight: 500;
-}
-
-/* Analytics Page */
-.analytics-header {
-    margin-bottom: 1.5rem;
-}
-
-.analytics-header h1 {
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
-}
-
-.analytics-header p {
-    color: var(--color-text-muted);
-}
-
-#rankings {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    overflow: hidden;
-}
-
-.rankings-table .rank {
-    font-weight: 600;
-    color: var(--color-text-muted);
-}
-
-.rankings-table .route {
-    color: var(--color-text-muted);
-    font-size: 0.875rem;
-}
-
-.rankings-table .on-time {
-    color: var(--color-success);
-    font-weight: 500;
+.station-header h1 {
+    font-size: 1.5rem;
 }
 
 /* Error Page */
 .error-page {
     text-align: center;
-    padding: 4rem 1rem;
+    padding: 3rem 1rem;
 }
 
 .error-page h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
     margin-bottom: 0.5rem;
 }
 
@@ -539,6 +637,7 @@ a:hover {
     background: var(--color-primary);
     color: white;
     border-radius: var(--radius);
+    min-height: 44px;
 }
 
 .btn:hover {
@@ -559,24 +658,30 @@ a:hover {
     color: var(--color-text-muted);
 }
 
-/* Responsive */
-@media (max-width: 640px) {
-    .nav {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .search-form {
-        flex-direction: column;
+/* Mobile-first: stacked on small screens */
+@media (max-width: 480px) {
+    .container {
+        padding: 0.75rem;
     }
 
     .times-row {
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
     }
 
     .station-header {
         flex-direction: column;
         gap: 0.25rem;
+    }
+
+    .board-table th,
+    .board-table td {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .station-tab-name {
+        font-size: 0.8125rem;
+        padding: 0.375rem 0.375rem 0.375rem 0.5rem;
     }
 }
