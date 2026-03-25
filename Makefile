@@ -1,26 +1,21 @@
-.PHONY: all build test test-unit test-integration clean sqlc templ fmt lint run serve migrate reset install help
+.PHONY: all build test test-unit test-integration clean templ fmt lint run serve install help
 
 # Variables
 BINARY := trenid
-GO_FILES := $(shell find . -name '*.go' -not -path './sqlc/generated/*')
+GO_FILES := $(shell find . -name '*.go')
 TEMPL_FILES := $(shell find . -name '*.templ')
-SQL_FILES := $(shell find . -path '*/queries/*.sql' 2>/dev/null)
 
 # Default target
 all: build
 
 # === Code Generation ===
 
-# Generate sqlc code (depends on SQL files)
-sqlc: $(SQL_FILES)
-	sqlc generate
-
 # Generate templ templates (depends on templ files)
 templ: $(TEMPL_FILES)
 	templ generate
 
-# Generate all code
-generate: sqlc templ
+# Alias
+generate: templ
 
 # === Build ===
 
@@ -73,16 +68,6 @@ tidy:
 # Check everything (format, lint, test)
 check: fmt lint test
 
-# === Database ===
-
-# Run migrations
-migrate: build
-	./$(BINARY) migrate
-
-# Reset database (drop all tables)
-reset: build
-	./$(BINARY) migrate 0
-
 # === Run ===
 
 # Start web server
@@ -106,11 +91,9 @@ dev:
 clean:
 	rm -f $(BINARY)
 	rm -f coverage.out coverage.html
-	rm -f *.db *.db-*
 
 # Clean generated code too
 clean-all: clean
-	rm -f internal/storage/generated/*.go
 	rm -f web/templates/*_templ.go
 
 # === Help ===
@@ -135,19 +118,14 @@ help:
 	@echo "  test-coverage   Generate + run tests with coverage report"
 	@echo ""
 	@echo "Code generation:"
-	@echo "  sqlc            Generate sqlc code from SQL"
 	@echo "  templ           Generate Go code from templ templates"
-	@echo "  generate        Generate all code (sqlc + templ)"
+	@echo "  generate        Alias for templ"
 	@echo ""
 	@echo "Code quality:"
 	@echo "  fmt             Format code"
 	@echo "  lint            Generate + run linter"
 	@echo "  tidy            Tidy go modules"
 	@echo "  check           Format + lint + test"
-	@echo ""
-	@echo "Database:"
-	@echo "  migrate         Build + run database migrations"
-	@echo "  reset           Build + reset database to version 0"
 	@echo ""
 	@echo "Run:"
 	@echo "  run             Build + start web server"

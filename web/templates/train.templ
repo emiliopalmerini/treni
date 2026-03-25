@@ -1,7 +1,6 @@
 package templates
 
 import (
-	"fmt"
 	"github.com/emiliopalmerini/treni/internal/domain"
 	"github.com/emiliopalmerini/treni/internal/service"
 )
@@ -22,9 +21,6 @@ templ TrainPage(result *service.TrainResult) {
 		>
 			@TrainStatusPartial(result.Train)
 		</div>
-		if result.Stats != nil && result.Stats.TotalTrips > 0 {
-			@TrainStatsSection(result.Stats)
-		}
 		@StopsList(result.Train.Stops)
 	}
 }
@@ -47,30 +43,6 @@ templ TrainStatusPartial(train *domain.Train) {
 			<span class="time-value">{ formatTime(train.ArrivalTime) }</span>
 		</div>
 	</div>
-}
-
-templ TrainStatsSection(stats *domain.TrainStats) {
-	<section class="train-stats">
-		<h2>Historical Performance</h2>
-		<div class="stats-grid">
-			<div class="stat-item">
-				<span class="stat-value">{ fmt.Sprintf("%d", stats.TotalTrips) }</span>
-				<span class="stat-label">Total Trips</span>
-			</div>
-			<div class="stat-item">
-				<span class="stat-value">{ fmt.Sprintf("%.0f%%", stats.OnTimeRate*100) }</span>
-				<span class="stat-label">On-Time Rate</span>
-			</div>
-			<div class="stat-item">
-				<span class="stat-value">{ fmt.Sprintf("%.1f", stats.AverageDelay) } min</span>
-				<span class="stat-label">Avg Delay</span>
-			</div>
-			<div class="stat-item">
-				<span class="stat-value">{ fmt.Sprintf("%d", stats.MaxDelay) } min</span>
-				<span class="stat-label">Max Delay</span>
-			</div>
-		</div>
-	</section>
 }
 
 templ StopsList(stops []domain.Stop) {
