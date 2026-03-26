@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/emiliopalmerini/treni/internal/api/viaggiatreno"
 	"github.com/emiliopalmerini/treni/internal/service"
+	"github.com/emiliopalmerini/treni/web"
 	"github.com/emiliopalmerini/treni/web/handlers"
 )
 
@@ -45,8 +47,12 @@ func main() {
 		r.Get("/station/{code}/arrivals", h.StationArrivals)
 	})
 
-	// Static files
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	// Static files (embedded)
+	staticSub, err := fs.Sub(web.StaticFS, "static")
+	if err != nil {
+		log.Fatal(err)
+	}
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
 
 	// 404 handler
 	r.NotFound(h.NotFound)
