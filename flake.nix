@@ -27,8 +27,7 @@
             pname = "trenibot";
             version = "0.2.0";
             src = ./.;
-            # First `nix build` will fail and print the real sha256 — paste it here.
-            vendorHash = nixpkgs.lib.fakeHash;
+            vendorHash = "sha256-SjWp+J5GP5PKKnMfDWFe3LKeSxLL2jIVa2okePYPmEA=";
 
             subPackages = [ "cmd/trenibot" ];
 
