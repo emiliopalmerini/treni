@@ -94,7 +94,7 @@ func (s *Service) DeparturesVia(ctx context.Context, stationCode, viaMatch strin
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			decisions <- decision{index: i, include: trainMatchesVia(ctx, s.api, d, needle)}
+			decisions <- decision{index: i, include: trainMatchesVia(ctx, s.api, d, stationCode, needle)}
 		}(i, d)
 	}
 	wg.Wait()
@@ -117,7 +117,7 @@ func (s *Service) DeparturesVia(ctx context.Context, stationCode, viaMatch strin
 	return out, nil
 }
 
-func trainMatchesVia(ctx context.Context, client api.TrainClient, d domain.Departure, needle string) bool {
+func trainMatchesVia(ctx context.Context, client api.TrainClient, d domain.Departure, fromCode, needle string) bool {
 	terminusMatches := strings.Contains(strings.ToLower(d.Destination), needle)
 
 	if d.TrainNumber == "" {
@@ -130,10 +130,26 @@ func trainMatchesVia(ctx context.Context, client api.TrainClient, d domain.Depar
 	if err != nil || train == nil {
 		return terminusMatches
 	}
-	for _, stop := range train.Stops {
+
+	fromIdx := indexOfStationCode(train.Stops, fromCode)
+	if fromIdx < 0 {
+		// FROM isn't in the stop list; can't tell which stops are downstream.
+		// Fall back to terminus match only to avoid matching reverse trains.
+		return terminusMatches
+	}
+	for _, stop := range train.Stops[fromIdx+1:] {
 		if strings.Contains(strings.ToLower(stop.StationName), needle) {
 			return true
 		}
 	}
 	return terminusMatches
+}
+
+func indexOfStationCode(stops []domain.Stop, code string) int {
+	for i, s := range stops {
+		if s.StationCode == code {
+			return i
+		}
+	}
+	return -1
 }

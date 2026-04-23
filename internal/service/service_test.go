@@ -66,20 +66,21 @@ func dep(number string, minutesFromNow int, dest string) domain.Departure {
 func trainWithStops(number string, stops ...string) *domain.Train {
 	s := make([]domain.Stop, len(stops))
 	for i, name := range stops {
-		s[i] = domain.Stop{StationName: name}
+		s[i] = domain.Stop{StationCode: name, StationName: name}
 	}
 	return &domain.Train{Number: number, Stops: s}
 }
 
+
 func TestDeparturesVia_matchesIntermediateStop(t *testing.T) {
-	// Train terminates at Albairate, but stops at Milano Porta Garibaldi.
-	// User queries `Desio > Milano` — should match.
+	// Train terminates at Albairate, but stops at Milano Porta Garibaldi
+	// AFTER Desio. User queries `Desio > Milano` — should match.
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
 			"DESIO": {dep("24001", 10, "Albairate")},
 		},
 		trains: map[string]*domain.Train{
-			"24001": trainWithStops("24001", "Desio", "Milano Porta Garibaldi", "Milano Bovisa", "Albairate"),
+			"24001": trainWithStops("24001", "DESIO", "Milano Porta Garibaldi", "Milano Bovisa", "Albairate"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
@@ -90,6 +91,56 @@ func TestDeparturesVia_matchesIntermediateStop(t *testing.T) {
 	}
 	if len(got) != 1 {
 		t.Fatalf("got %d, want 1 (train stops at Milano)", len(got))
+	}
+}
+
+func TestDeparturesVia_excludesReverseDirection(t *testing.T) {
+	// Milano appears BEFORE Desio in the stop list: train is heading
+	// *away* from Milano. Must NOT match `Desio > Milano`.
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {dep("24003", 10, "Saronno")},
+		},
+		trains: map[string]*domain.Train{
+			"24003": trainWithStops("24003",
+				"Albairate", "Milano Bovisa", "Milano Porta Garibaldi",
+				"DESIO", "Seregno", "Saronno"),
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("got %d, want 0 (Milano is before Desio; reverse direction)", len(got))
+	}
+}
+
+func TestDeparturesVia_fromNotInStopsFallsBackToTerminus(t *testing.T) {
+	// GetTrain succeeds but stops don't include the FROM code (odd API).
+	// Must fall back to terminus-only match, NOT accept any stop.
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {
+				dep("A", 10, "Milano Centrale"), // terminus matches
+				dep("B", 20, "Saronno"),          // terminus doesn't match
+			},
+		},
+		trains: map[string]*domain.Train{
+			"A": trainWithStops("A", "Seregno", "Milano Centrale"), // no DESIO
+			"B": trainWithStops("B", "Milano", "Seregno", "Saronno"), // Milano before unrelated stop
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].TrainNumber != "A" {
+		t.Fatalf("want only A (terminus match); got %v", got)
 	}
 }
 
@@ -122,8 +173,8 @@ func TestDeparturesVia_excludesNonMatchingTrain(t *testing.T) {
 			},
 		},
 		trains: map[string]*domain.Train{
-			"24001": trainWithStops("24001", "Desio", "Seveso", "Saronno"),
-			"24002": trainWithStops("24002", "Desio", "Milano Bovisa", "Albairate"),
+			"24001": trainWithStops("24001", "DESIO", "Seveso", "Saronno"),
+			"24002": trainWithStops("24002", "DESIO", "Milano Bovisa", "Albairate"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
@@ -177,9 +228,9 @@ func TestDeparturesVia_preservesAscendingOrder(t *testing.T) {
 			},
 		},
 		trains: map[string]*domain.Train{
-			"A": trainWithStops("A", "Desio", "Milano"),
-			"B": trainWithStops("B", "Desio", "Milano"),
-			"C": trainWithStops("C", "Desio", "Milano"),
+			"A": trainWithStops("A", "DESIO", "Milano"),
+			"B": trainWithStops("B", "DESIO", "Milano"),
+			"C": trainWithStops("C", "DESIO", "Milano"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
@@ -205,9 +256,9 @@ func TestDeparturesVia_windowFilter(t *testing.T) {
 			},
 		},
 		trains: map[string]*domain.Train{
-			"A": trainWithStops("A", "Desio", "Milano"),
-			"B": trainWithStops("B", "Desio", "Milano"),
-			"C": trainWithStops("C", "Desio", "Milano"),
+			"A": trainWithStops("A", "DESIO", "Milano"),
+			"B": trainWithStops("B", "DESIO", "Milano"),
+			"C": trainWithStops("C", "DESIO", "Milano"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
