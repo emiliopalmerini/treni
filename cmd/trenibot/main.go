@@ -32,6 +32,7 @@ func main() {
 	dispatcher := bot.NewDispatcher(cfg.AllowedChats)
 	dispatcher.OnText(bot.NewQueryHandler(svc, defaultWindow))
 	dispatcher.OnCallback("q:", bot.NewCallbackHandler(svc, defaultWindow))
+	dispatcher.OnCallback("d:", bot.NewDirectionHandler(svc, defaultWindow))
 
 	var sender bot.Sender
 	defaultHandler := func(hctx context.Context, b *tgbot.Bot, update *models.Update) {

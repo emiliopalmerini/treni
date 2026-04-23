@@ -20,8 +20,10 @@ const (
 	upstreamDownMsg = "Couldn't reach ViaggiaTreno. Try again in a sec."
 
 	maxStationChoices = 5
-	callbackPrefix    = "q:"
+	stationCallback   = "q:"
+	directionCallback = "d:"
 	buttonLabelMax    = 40
+	terminusMax       = 40
 )
 
 func NewQueryHandler(svc QueryService, window time.Duration) Handler {
@@ -39,14 +41,16 @@ func NewQueryHandler(svc QueryService, window time.Duration) Handler {
 		if len(stations) == 0 {
 			return s.SendMessage(ctx, msg.Chat.ID, "No station found for '"+stationQuery+"'.")
 		}
+
+		target := messageTarget{chatID: msg.Chat.ID}
 		if len(stations) > 1 {
-			return sendPicker(ctx, s, msg.Chat.ID, line, stations)
+			return sendStationPicker(ctx, s, target, line, stations)
 		}
-		return replyWithDepartures(ctx, s, svc, msg.Chat.ID, line, stations[0], window, sendReply)
+		return routeAfterStation(ctx, s, svc, target, line, stations[0], window)
 	}
 }
 
-func sendPicker(ctx context.Context, s Sender, chatID int64, line string, stations []domain.Station) error {
+func sendStationPicker(ctx context.Context, s Sender, target messageTarget, line string, stations []domain.Station) error {
 	if len(stations) > maxStationChoices {
 		stations = stations[:maxStationChoices]
 	}
@@ -54,32 +58,11 @@ func sendPicker(ctx context.Context, s Sender, chatID int64, line string, statio
 	for i, st := range stations {
 		buttons[i] = Button{
 			Text: truncate(st.Name, buttonLabelMax),
-			Data: callbackPrefix + line + ":" + st.Code,
+			Data: stationCallback + line + ":" + st.Code,
 		}
 	}
-	return s.SendMessageWithButtons(ctx, chatID,
+	return target.renderWithButtons(ctx, s,
 		"Multiple matches for "+line+". Pick one:", buttons)
-}
-
-func replyWithDepartures(
-	ctx context.Context, s Sender, svc QueryService,
-	chatID int64, line string, station domain.Station, window time.Duration,
-	reply func(ctx context.Context, s Sender, chatID int64, text string) error,
-) error {
-	deps, err := svc.QueryDepartures(ctx, line, station.Code, window)
-	if err != nil {
-		log.Printf("QueryDepartures %s @ %s: %v", line, station.Code, err)
-		return reply(ctx, s, chatID, upstreamDownMsg)
-	}
-	if len(deps) == 0 {
-		return reply(ctx, s, chatID,
-			"No "+line+" departures from "+station.Name+" in the next "+fmtMin(window)+".")
-	}
-	return reply(ctx, s, chatID, formatDepartures(line, station.Name, window, deps))
-}
-
-func sendReply(ctx context.Context, s Sender, chatID int64, text string) error {
-	return s.SendMessage(ctx, chatID, text)
 }
 
 func fmtMin(d time.Duration) string {

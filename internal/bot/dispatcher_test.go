@@ -33,6 +33,7 @@ type editedMessage struct {
 	ChatID    int64
 	MessageID int
 	Text      string
+	Buttons   []bot.Button
 }
 
 func (f *fakeSender) SendMessage(_ context.Context, chatID int64, text string) error {
@@ -53,6 +54,13 @@ func (f *fakeSender) EditMessageText(_ context.Context, chatID int64, messageID 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.edits = append(f.edits, editedMessage{ChatID: chatID, MessageID: messageID, Text: text})
+	return nil
+}
+
+func (f *fakeSender) EditMessageWithButtons(_ context.Context, chatID int64, messageID int, text string, buttons []bot.Button) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.edits = append(f.edits, editedMessage{ChatID: chatID, MessageID: messageID, Text: text, Buttons: buttons})
 	return nil
 }
 

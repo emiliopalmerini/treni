@@ -41,6 +41,16 @@ func (s *tgSender) EditMessageText(ctx context.Context, chatID int64, messageID 
 	return err
 }
 
+func (s *tgSender) EditMessageWithButtons(ctx context.Context, chatID int64, messageID int, text string, buttons []Button) error {
+	_, err := s.b.EditMessageText(ctx, &tgbot.EditMessageTextParams{
+		ChatID:      chatID,
+		MessageID:   messageID,
+		Text:        text,
+		ReplyMarkup: toInlineKeyboard(buttons),
+	})
+	return err
+}
+
 func (s *tgSender) AnswerCallback(ctx context.Context, callbackID string) error {
 	_, err := s.b.AnswerCallbackQuery(ctx, &tgbot.AnswerCallbackQueryParams{
 		CallbackQueryID: callbackID,
