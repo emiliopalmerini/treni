@@ -23,6 +23,9 @@ const (
 )
 
 func Load() (*Config, error) {
+	if err := loadEnvFile(".env"); err != nil {
+		return nil, fmt.Errorf("load .env: %w", err)
+	}
 	token := strings.TrimSpace(os.Getenv(envBotToken))
 	if token == "" {
 		return nil, fmt.Errorf("%s is required", envBotToken)

@@ -21,6 +21,9 @@ make clean          # Clean build artifacts
 | `TELEGRAM_ALLOWED_CHAT_IDS` | yes | Comma-separated allowed chat IDs |
 | `STATE_FILE` | no | Path to JSON state file (default `./state.json`) |
 
+For local dev, drop a `.env` file in the working directory (see
+`.env.example`). Process-level env vars take precedence over `.env`.
+
 ## Project Structure
 
 ```
