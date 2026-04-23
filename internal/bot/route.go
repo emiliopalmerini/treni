@@ -29,56 +29,19 @@ func (t messageTarget) renderWithButtons(ctx context.Context, s Sender, text str
 	return s.EditMessageWithButtons(ctx, t.chatID, t.messageID, text, buttons)
 }
 
-// routeAfterStation runs the shared path for "we know line + station; now
-// fetch and decide whether to list or ask for direction."
-func routeAfterStation(
+// renderDepartures fetches and renders departures from `station` toward `to`.
+func renderDepartures(
 	ctx context.Context, s Sender, svc QueryService,
-	target messageTarget, line string, station domain.Station, window time.Duration,
+	target messageTarget, station domain.Station, to string, window time.Duration,
 ) error {
-	deps, err := svc.QueryDepartures(ctx, line, station.Code, window)
+	deps, err := svc.DeparturesFromTo(ctx, station.Code, to, window)
 	if err != nil {
-		log.Printf("QueryDepartures %s @ %s: %v", line, station.Code, err)
+		log.Printf("DeparturesFromTo %s → %q: %v", station.Code, to, err)
 		return target.renderText(ctx, s, upstreamDownMsg)
 	}
 	now := svc.Now()
 	if len(deps) == 0 {
-		return target.renderText(ctx, s, formatEmpty(line, station.Name, now, window))
+		return target.renderText(ctx, s, formatEmpty(station.Name, to, now, window))
 	}
-
-	termini := distinctTermini(deps)
-	if len(termini) == 1 {
-		return target.renderText(ctx, s, formatDepartures(line, station.Name, now, window, deps))
-	}
-
-	return target.renderWithButtons(ctx, s,
-		"Which direction from "+station.Name+"?",
-		directionButtons(line, station.Code, termini))
-}
-
-func distinctTermini(deps []domain.Departure) []string {
-	seen := make(map[string]struct{}, 4)
-	out := make([]string, 0, 4)
-	for _, d := range deps {
-		if _, ok := seen[d.Destination]; ok {
-			continue
-		}
-		seen[d.Destination] = struct{}{}
-		out = append(out, d.Destination)
-	}
-	return out
-}
-
-func directionButtons(line, stationCode string, termini []string) []Button {
-	btns := make([]Button, 0, len(termini)+1)
-	for _, t := range termini {
-		btns = append(btns, Button{
-			Text: "→ " + t,
-			Data: directionCallback + line + ":" + stationCode + ":" + truncate(t, terminusMax),
-		})
-	}
-	btns = append(btns, Button{
-		Text: "Tutti",
-		Data: directionCallback + line + ":" + stationCode + ":*",
-	})
-	return btns
+	return target.renderText(ctx, s, formatDepartures(station.Name, to, now, window, deps))
 }

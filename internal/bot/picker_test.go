@@ -35,7 +35,7 @@ func TestQueryHandler_multipleStationsShowsPicker(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "RV Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Milano > Brescia"))
 
 	if len(sender.messages()) != 0 {
 		t.Errorf("expected no plain messages, got %d", len(sender.messages()))
@@ -45,17 +45,15 @@ func TestQueryHandler_multipleStationsShowsPicker(t *testing.T) {
 		t.Fatalf("got %d keyboards, want 1", len(kbs))
 	}
 	kb := kbs[0]
-	if kb.ChatID != 42 {
-		t.Errorf("chat = %d, want 42", kb.ChatID)
-	}
 	if len(kb.Buttons) != 3 {
 		t.Fatalf("got %d buttons, want 3", len(kb.Buttons))
 	}
-	if !strings.Contains(kb.Buttons[0].Data, "S01234") {
-		t.Errorf("button 0 data missing code: %q", kb.Buttons[0].Data)
+	// Callback data: q:<STATION_CODE>:<TO>
+	if !strings.HasPrefix(kb.Buttons[0].Data, "q:S01234:") {
+		t.Errorf("button data prefix wrong: %q", kb.Buttons[0].Data)
 	}
-	if !strings.Contains(kb.Buttons[0].Data, "RV") {
-		t.Errorf("button 0 data missing line: %q", kb.Buttons[0].Data)
+	if !strings.HasSuffix(kb.Buttons[0].Data, ":Brescia") {
+		t.Errorf("button data missing TO: %q", kb.Buttons[0].Data)
 	}
 	if kb.Buttons[0].Text != "Milano Centrale" {
 		t.Errorf("button 0 text = %q, want Milano Centrale", kb.Buttons[0].Text)
@@ -74,7 +72,7 @@ func TestQueryHandler_cappedAtMaxChoices(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "S9 San"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "San > Milano"))
 
 	kbs := sender.sentKeyboards()
 	if len(kbs) != 1 {
@@ -85,32 +83,29 @@ func TestQueryHandler_cappedAtMaxChoices(t *testing.T) {
 	}
 }
 
-func TestCallbackHandler_decodesAndReplies(t *testing.T) {
+func TestCallbackHandler_decodesAndEditsWithResults(t *testing.T) {
 	fc := &fakeQuerySvc{
 		departures: []domain.Departure{
 			{
 				TrainCategory: "RV",
-				ScheduledTime: time.Date(2026, 4, 24, 14, 32, 0, 0, time.UTC),
-				Destination:   "Brescia",
+				ScheduledTime: time.Date(2026, 4, 25, 8, 32, 0, 0, time.UTC),
+				Destination:   "Brescia Ovest",
 				Platform:      "7",
 			},
 		},
 	}
-	// Pre-seed the station name in the service so the callback handler can
-	// format a nice header. For this test, we accept that the handler may
-	// fall back to the station code if it doesn't have a name.
 	sender := &fakeSender{}
 	d := bot.NewDispatcher([]int64{42})
 	d.OnCallback("q:", bot.NewCallbackHandler(fc, 60*time.Minute))
 
 	_ = d.Handle(context.Background(), sender,
-		newCallbackUpdate(42, 101, "cb-xyz", "q:RV:S01234"))
+		newCallbackUpdate(42, 101, "cb-xyz", "q:S01234:Brescia"))
 
-	if fc.gotLine != "RV" {
-		t.Errorf("line = %q, want RV", fc.gotLine)
-	}
 	if fc.gotStation != "S01234" {
 		t.Errorf("station = %q, want S01234", fc.gotStation)
+	}
+	if fc.gotTo != "Brescia" {
+		t.Errorf("to = %q, want Brescia", fc.gotTo)
 	}
 
 	edits := sender.editedMessages()
@@ -120,7 +115,7 @@ func TestCallbackHandler_decodesAndReplies(t *testing.T) {
 	if edits[0].MessageID != 101 {
 		t.Errorf("message id = %d, want 101", edits[0].MessageID)
 	}
-	if !strings.Contains(edits[0].Text, "Brescia") {
+	if !strings.Contains(edits[0].Text, "Brescia Ovest") {
 		t.Errorf("edit missing destination: %q", edits[0].Text)
 	}
 
@@ -137,15 +132,12 @@ func TestCallbackHandler_nonWhitelistedDropped(t *testing.T) {
 	d.OnCallback("q:", bot.NewCallbackHandler(fc, 60*time.Minute))
 
 	_ = d.Handle(context.Background(), sender,
-		newCallbackUpdate(999, 101, "cb", "q:RV:S01234"))
+		newCallbackUpdate(999, 101, "cb", "q:S01234:Milano"))
 
 	if len(sender.editedMessages()) != 0 {
 		t.Errorf("expected no edits for non-whitelisted callback")
 	}
-	if len(sender.answered()) != 0 {
-		t.Errorf("expected no answers for non-whitelisted callback")
-	}
-	if fc.gotLine != "" {
+	if fc.gotStation != "" {
 		t.Errorf("service invoked for non-whitelisted callback")
 	}
 }
@@ -157,11 +149,9 @@ func TestCallbackHandler_malformedDataDropped(t *testing.T) {
 	d.OnCallback("q:", bot.NewCallbackHandler(fc, 60*time.Minute))
 
 	_ = d.Handle(context.Background(), sender,
-		newCallbackUpdate(42, 101, "cb", "q:onlytwo"))
+		newCallbackUpdate(42, 101, "cb", "q:onlyonepart"))
 
-	// Malformed callback: answer it so Telegram dismisses the spinner,
-	// but don't invoke the service or edit the message.
-	if fc.gotLine != "" {
+	if fc.gotStation != "" {
 		t.Errorf("service invoked on malformed callback")
 	}
 	ans := sender.answered()

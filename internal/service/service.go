@@ -48,20 +48,21 @@ func (s *Service) Now() time.Time {
 	return s.now()
 }
 
-// QueryDepartures returns departures from stationCode whose TrainCategory
-// equals line (case-insensitive) and whose ScheduledTime is within
-// [now, now+window]. Results are sorted ascending by ScheduledTime.
-func (s *Service) QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error) {
+// DeparturesFromTo returns departures from stationCode whose terminus
+// (Destination) contains toMatch as a case-insensitive substring and whose
+// ScheduledTime is within [now, now+window]. Sorted ascending by time.
+func (s *Service) DeparturesFromTo(ctx context.Context, stationCode, toMatch string, window time.Duration) ([]domain.Departure, error) {
 	now := s.now()
 	deps, err := s.api.GetDepartures(ctx, stationCode, now)
 	if err != nil {
 		return nil, err
 	}
 	cutoff := now.Add(window)
+	toLower := strings.ToLower(toMatch)
 
 	var out []domain.Departure
 	for _, d := range deps {
-		if !strings.EqualFold(d.TrainCategory, line) {
+		if !strings.Contains(strings.ToLower(d.Destination), toLower) {
 			continue
 		}
 		if d.ScheduledTime.Before(now) || d.ScheduledTime.After(cutoff) {

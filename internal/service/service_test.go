@@ -35,78 +35,74 @@ func (f *fakeClient) GetDepartures(ctx context.Context, stationCode string, at t
 }
 
 func fixedNow() time.Time {
-	return time.Date(2026, 4, 24, 14, 0, 0, 0, time.UTC)
+	return time.Date(2026, 4, 25, 8, 0, 0, 0, time.UTC)
 }
 
-func dep(category string, minutesFromNow int, dest string) domain.Departure {
+func dep(minutesFromNow int, dest string) domain.Departure {
 	return domain.Departure{
-		TrainCategory: category,
 		ScheduledTime: fixedNow().Add(time.Duration(minutesFromNow) * time.Minute),
 		Destination:   dest,
 	}
 }
 
-func TestQueryDepartures_filtersByLineCaseInsensitive(t *testing.T) {
+func TestDeparturesFromTo_substringCaseInsensitive(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
-			"S123": {
-				dep("S9", 10, "Saronno"),
-				dep("RV", 12, "Milano Centrale"),
-				dep("s9", 15, "Albairate"),
+			"DESIO": {
+				dep(10, "Milano Centrale"),
+				dep(15, "Saronno"),
+				dep(20, "Milano Porta Garibaldi"),
 			},
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.QueryDepartures(context.Background(), "s9", "S123", 60*time.Minute)
+	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "milano", 60*time.Minute)
 	if err != nil {
-		t.Fatalf("QueryDepartures: %v", err)
+		t.Fatalf("DeparturesFromTo: %v", err)
 	}
 	if len(got) != 2 {
-		t.Fatalf("got %d departures, want 2", len(got))
+		t.Fatalf("got %d, want 2 (both Milano destinations)", len(got))
 	}
 }
 
-func TestQueryDepartures_windowExcludesPastAndFuture(t *testing.T) {
+func TestDeparturesFromTo_windowExcludesOutOfRange(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
-			"S123": {
-				dep("S9", -5, "Saronno"),   // past: excluded
-				dep("S9", 10, "Saronno"),   // inside: included
-				dep("S9", 55, "Albairate"), // inside: included
-				dep("S9", 65, "Saronno"),   // outside: excluded
+			"DESIO": {
+				dep(-5, "Milano"),
+				dep(10, "Milano"),
+				dep(55, "Milano"),
+				dep(65, "Milano"),
 			},
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
+	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if err != nil {
-		t.Fatalf("QueryDepartures: %v", err)
+		t.Fatal(err)
 	}
 	if len(got) != 2 {
 		t.Fatalf("got %d, want 2 (only in-window)", len(got))
 	}
 }
 
-func TestQueryDepartures_sortedAscending(t *testing.T) {
+func TestDeparturesFromTo_sortedAscending(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
-			"S123": {
-				dep("S9", 40, "Saronno"),
-				dep("S9", 5, "Albairate"),
-				dep("S9", 20, "Saronno"),
+			"DESIO": {
+				dep(40, "Milano"),
+				dep(5, "Milano"),
+				dep(20, "Milano"),
 			},
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
+	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if err != nil {
-		t.Fatalf("QueryDepartures: %v", err)
-	}
-	if len(got) != 3 {
-		t.Fatalf("got %d, want 3", len(got))
+		t.Fatal(err)
 	}
 	for i := 1; i < len(got); i++ {
 		if got[i].ScheduledTime.Before(got[i-1].ScheduledTime) {
@@ -115,42 +111,40 @@ func TestQueryDepartures_sortedAscending(t *testing.T) {
 	}
 }
 
-func TestQueryDepartures_noMatchesReturnsEmpty(t *testing.T) {
+func TestDeparturesFromTo_noMatchesReturnsEmpty(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
-			"S123": {dep("RV", 10, "Milano")},
+			"DESIO": {dep(10, "Saronno")},
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
+	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if err != nil {
-		t.Fatalf("QueryDepartures: %v", err)
+		t.Fatal(err)
 	}
 	if len(got) != 0 {
 		t.Fatalf("got %d, want 0", len(got))
 	}
 }
 
-func TestQueryDepartures_propagatesAPIError(t *testing.T) {
+func TestDeparturesFromTo_propagatesAPIError(t *testing.T) {
 	want := errors.New("boom")
 	fc := &fakeClient{err: want}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	_, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
+	_, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if !errors.Is(err, want) {
 		t.Fatalf("err = %v, want wraps %v", err, want)
 	}
 }
 
-func TestQueryDepartures_passesClockThroughToAPI(t *testing.T) {
-	fc := &fakeClient{departures: map[string][]domain.Departure{"S123": {}}}
+func TestDeparturesFromTo_passesClockToAPI(t *testing.T) {
+	fc := &fakeClient{departures: map[string][]domain.Departure{"DESIO": {}}}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	_, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, _ = svc.DeparturesFromTo(context.Background(), "DESIO", "M", 60*time.Minute)
+
 	if !fc.gotAt.Equal(fixedNow()) {
 		t.Errorf("client got at=%v, want %v", fc.gotAt, fixedNow())
 	}

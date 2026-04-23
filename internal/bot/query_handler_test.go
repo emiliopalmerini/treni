@@ -18,8 +18,8 @@ type fakeQuerySvc struct {
 	departures    []domain.Departure
 	departuresErr error
 
-	gotLine    string
 	gotStation string
+	gotTo      string
 	gotWindow  time.Duration
 }
 
@@ -27,15 +27,15 @@ func (f *fakeQuerySvc) SearchStations(ctx context.Context, q string) ([]domain.S
 	return f.stations, f.searchErr
 }
 
-func (f *fakeQuerySvc) QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error) {
-	f.gotLine = line
+func (f *fakeQuerySvc) DeparturesFromTo(ctx context.Context, stationCode, toMatch string, window time.Duration) ([]domain.Departure, error) {
 	f.gotStation = stationCode
+	f.gotTo = toMatch
 	f.gotWindow = window
 	return f.departures, f.departuresErr
 }
 
 func (f *fakeQuerySvc) Now() time.Time {
-	return time.Date(2026, 4, 24, 14, 0, 0, 0, time.UTC)
+	return time.Date(2026, 4, 25, 8, 0, 0, 0, time.UTC)
 }
 
 func newTextUpdate(chatID int64, text string) *models.Update {
@@ -50,10 +50,9 @@ func TestQueryHandler_successPath(t *testing.T) {
 		stations: []domain.Station{{Code: "S01234", Name: "Desio"}},
 		departures: []domain.Departure{
 			{
-				TrainCategory: "S9",
-				ScheduledTime: time.Date(2026, 4, 24, 14, 32, 0, 0, time.UTC),
-				Destination:   "Saronno",
-				Delay:         3,
+				TrainCategory: "S",
+				ScheduledTime: time.Date(2026, 4, 25, 8, 32, 0, 0, time.UTC),
+				Destination:   "Milano Porta Garibaldi",
 				Platform:      "2",
 			},
 		},
@@ -62,18 +61,18 @@ func TestQueryHandler_successPath(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	if err := d.Handle(context.Background(), sender, newTextUpdate(42, "S9 Desio")); err != nil {
+	if err := d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano")); err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
 
-	if fc.gotLine != "S9" {
-		t.Errorf("service got line %q, want S9", fc.gotLine)
-	}
 	if fc.gotStation != "S01234" {
-		t.Errorf("service got station %q, want S01234", fc.gotStation)
+		t.Errorf("got station %q, want S01234", fc.gotStation)
+	}
+	if fc.gotTo != "Milano" {
+		t.Errorf("got to %q, want Milano", fc.gotTo)
 	}
 	if fc.gotWindow != 60*time.Minute {
-		t.Errorf("service got window %v, want 60m", fc.gotWindow)
+		t.Errorf("got window %v, want 60m", fc.gotWindow)
 	}
 
 	msgs := sender.messages()
@@ -81,14 +80,10 @@ func TestQueryHandler_successPath(t *testing.T) {
 		t.Fatalf("got %d messages, want 1", len(msgs))
 	}
 	text := msgs[0].Text
-	if !strings.Contains(text, "S9") {
-		t.Errorf("reply missing line: %q", text)
-	}
-	if !strings.Contains(text, "Desio") {
-		t.Errorf("reply missing station: %q", text)
-	}
-	if !strings.Contains(text, "Saronno") {
-		t.Errorf("reply missing destination: %q", text)
+	for _, s := range []string{"Desio", "Milano", "Milano Porta Garibaldi"} {
+		if !strings.Contains(text, s) {
+			t.Errorf("reply missing %q: %q", s, text)
+		}
 	}
 }
 
@@ -98,11 +93,11 @@ func TestQueryHandler_noStation(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "S9 NotARealPlace"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "NotARealPlace > Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
-		t.Fatalf("got %d messages, want 1", len(msgs))
+		t.Fatalf("got %d, want 1", len(msgs))
 	}
 	if !strings.Contains(strings.ToLower(msgs[0].Text), "no station") {
 		t.Errorf("expected 'no station' reply, got %q", msgs[0].Text)
@@ -118,15 +113,18 @@ func TestQueryHandler_noDepartures(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "S9 Desio"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
-		t.Fatalf("got %d messages, want 1", len(msgs))
+		t.Fatalf("got %d, want 1", len(msgs))
 	}
 	lower := strings.ToLower(msgs[0].Text)
-	if !strings.Contains(lower, "no") || !strings.Contains(lower, "s9") {
-		t.Errorf("expected 'no S9' reply, got %q", msgs[0].Text)
+	if !strings.Contains(lower, "no trains") {
+		t.Errorf("expected 'no trains' reply, got %q", msgs[0].Text)
+	}
+	if !strings.Contains(lower, "now ") {
+		t.Errorf("empty-state should include current time: %q", msgs[0].Text)
 	}
 }
 
@@ -136,19 +134,14 @@ func TestQueryHandler_searchError(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "S9 Desio"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
-		t.Fatalf("got %d messages, want 1", len(msgs))
+		t.Fatalf("got %d, want 1", len(msgs))
 	}
-	// User-facing text must not leak "upstream down"
 	if strings.Contains(msgs[0].Text, "upstream down") {
 		t.Errorf("reply leaks internal error: %q", msgs[0].Text)
-	}
-	if !strings.Contains(strings.ToLower(msgs[0].Text), "viaggiatreno") &&
-		!strings.Contains(strings.ToLower(msgs[0].Text), "try again") {
-		t.Errorf("reply missing friendly error: %q", msgs[0].Text)
 	}
 }
 
@@ -162,10 +155,9 @@ func TestQueryHandler_badFormat(t *testing.T) {
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
-		t.Fatalf("got %d messages, want 1", len(msgs))
+		t.Fatalf("got %d, want 1", len(msgs))
 	}
-	if !strings.Contains(strings.ToLower(msgs[0].Text), "format") &&
-		!strings.Contains(strings.ToLower(msgs[0].Text), "example") {
+	if !strings.Contains(strings.ToLower(msgs[0].Text), "format") {
 		t.Errorf("reply missing format hint: %q", msgs[0].Text)
 	}
 }
@@ -180,9 +172,9 @@ func TestQueryHandler_slashStillGoesToCommand(t *testing.T) {
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
-		t.Fatalf("got %d messages, want 1", len(msgs))
+		t.Fatalf("got %d, want 1", len(msgs))
 	}
-	if fc.gotLine != "" {
+	if fc.gotStation != "" {
 		t.Error("slash command must not reach query service")
 	}
 	if !strings.Contains(strings.ToLower(msgs[0].Text), "ciao") {

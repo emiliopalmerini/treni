@@ -1,7 +1,7 @@
 # ADR-007: Line-at-Station Query
 
 ## Status
-Accepted
+Superseded by ADR-010
 
 ## Context
 ADR-006 shipped an empty bot skeleton. This ADR adds the primary use-case:

@@ -1,7 +1,7 @@
 # ADR-009: Direction Disambiguation via Inline Keyboard
 
 ## Status
-Accepted
+Superseded by ADR-010
 
 ## Context
 Lines like S9 run in two directions (Saronno ↔ Albairate via Milano).

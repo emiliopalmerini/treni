@@ -11,58 +11,58 @@ import (
 
 type QueryService interface {
 	SearchStations(ctx context.Context, query string) ([]domain.Station, error)
-	QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error)
+	DeparturesFromTo(ctx context.Context, stationCode, toMatch string, window time.Duration) ([]domain.Departure, error)
 	Now() time.Time
 }
 
 const (
-	formatHint      = "Query format: <LINE> <STATION>. Example: S9 Desio. /help for more."
+	formatHint      = "Query format: <FROM> > <TO>. Example: Desio > Milano. /help for more."
 	upstreamDownMsg = "Couldn't reach ViaggiaTreno. Try again in a sec."
 
 	maxStationChoices = 5
 	stationCallback   = "q:"
-	directionCallback = "d:"
 	buttonLabelMax    = 40
-	terminusMax       = 40
+	toMax             = 40
 )
 
 func NewQueryHandler(svc QueryService, window time.Duration) Handler {
 	return func(ctx context.Context, s Sender, msg *models.Message) error {
-		line, stationQuery, ok := parseQuery(msg.Text)
+		from, to, ok := parseFromTo(msg.Text)
 		if !ok {
 			return s.SendMessage(ctx, msg.Chat.ID, formatHint)
 		}
 
-		stations, err := svc.SearchStations(ctx, stationQuery)
+		stations, err := svc.SearchStations(ctx, from)
 		if err != nil {
-			log.Printf("SearchStations %q: %v", stationQuery, err)
+			log.Printf("SearchStations %q: %v", from, err)
 			return s.SendMessage(ctx, msg.Chat.ID, upstreamDownMsg)
 		}
 		if len(stations) == 0 {
-			return s.SendMessage(ctx, msg.Chat.ID, "No station found for '"+stationQuery+"'.")
+			return s.SendMessage(ctx, msg.Chat.ID, "No station found for '"+from+"'.")
 		}
 
 		target := messageTarget{chatID: msg.Chat.ID}
 		if len(stations) > 1 {
-			return sendStationPicker(ctx, s, target, line, stations)
+			return sendStationPicker(ctx, s, target, stations, to)
 		}
-		return routeAfterStation(ctx, s, svc, target, line, stations[0], window)
+		return renderDepartures(ctx, s, svc, target, stations[0], to, window)
 	}
 }
 
-func sendStationPicker(ctx context.Context, s Sender, target messageTarget, line string, stations []domain.Station) error {
+func sendStationPicker(ctx context.Context, s Sender, target messageTarget, stations []domain.Station, to string) error {
 	if len(stations) > maxStationChoices {
 		stations = stations[:maxStationChoices]
 	}
+	truncatedTo := truncate(to, toMax)
 	buttons := make([]Button, len(stations))
 	for i, st := range stations {
 		buttons[i] = Button{
 			Text: truncate(st.Name, buttonLabelMax),
-			Data: stationCallback + line + ":" + st.Code,
+			Data: stationCallback + st.Code + ":" + truncatedTo,
 		}
 	}
 	return target.renderWithButtons(ctx, s,
-		"Multiple matches for "+line+". Pick one:", buttons)
+		"Multiple matches for origin. Pick one:", buttons)
 }
 
 func truncate(s string, max int) string {
