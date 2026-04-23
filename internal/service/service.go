@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/emiliopalmerini/treni/internal/api"
 	"github.com/emiliopalmerini/treni/internal/domain"
@@ -9,10 +12,15 @@ import (
 
 type Service struct {
 	api api.TrainClient
+	now func() time.Time
 }
 
 func New(api api.TrainClient) *Service {
-	return &Service{api: api}
+	return NewWithClock(api, time.Now)
+}
+
+func NewWithClock(api api.TrainClient, now func() time.Time) *Service {
+	return &Service{api: api, now: now}
 }
 
 // TrainResult holds real-time train data
@@ -20,7 +28,6 @@ type TrainResult struct {
 	Train *domain.Train
 }
 
-// GetTrain returns real-time train data
 func (s *Service) GetTrain(ctx context.Context, trainNumber string) (*TrainResult, error) {
 	train, err := s.api.GetTrain(ctx, trainNumber)
 	if err != nil {
@@ -29,12 +36,37 @@ func (s *Service) GetTrain(ctx context.Context, trainNumber string) (*TrainResul
 	return &TrainResult{Train: train}, nil
 }
 
-// GetStation returns station data with arrivals and departures
 func (s *Service) GetStation(ctx context.Context, stationCode string) (*domain.Station, error) {
 	return s.api.GetStation(ctx, stationCode)
 }
 
-// SearchStations searches for stations by name
 func (s *Service) SearchStations(ctx context.Context, query string) ([]domain.Station, error) {
 	return s.api.SearchStation(ctx, query)
+}
+
+// QueryDepartures returns departures from stationCode whose TrainCategory
+// equals line (case-insensitive) and whose ScheduledTime is within
+// [now, now+window]. Results are sorted ascending by ScheduledTime.
+func (s *Service) QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error) {
+	deps, err := s.api.GetDepartures(ctx, stationCode)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	cutoff := now.Add(window)
+
+	var out []domain.Departure
+	for _, d := range deps {
+		if !strings.EqualFold(d.TrainCategory, line) {
+			continue
+		}
+		if d.ScheduledTime.Before(now) || d.ScheduledTime.After(cutoff) {
+			continue
+		}
+		out = append(out, d)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].ScheduledTime.Before(out[j].ScheduledTime)
+	})
+	return out, nil
 }

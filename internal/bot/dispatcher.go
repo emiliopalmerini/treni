@@ -8,9 +8,10 @@ import (
 )
 
 type Dispatcher struct {
-	allowed  map[int64]struct{}
-	commands map[string]Handler
-	fallback Handler
+	allowed        map[int64]struct{}
+	commands       map[string]Handler
+	onText         Handler
+	onUnknownCmd   Handler
 }
 
 func NewDispatcher(allowedChats []int64) *Dispatcher {
@@ -18,11 +19,11 @@ func NewDispatcher(allowedChats []int64) *Dispatcher {
 	for _, id := range allowedChats {
 		allowed[id] = struct{}{}
 	}
-
 	d := &Dispatcher{
-		allowed:  allowed,
-		commands: make(map[string]Handler),
-		fallback: fallbackHandler,
+		allowed:      allowed,
+		commands:     make(map[string]Handler),
+		onText:       fallbackHandler,
+		onUnknownCmd: fallbackHandler,
 	}
 	d.commands["/start"] = startHandler
 	d.commands["/help"] = helpHandler
@@ -31,6 +32,11 @@ func NewDispatcher(allowedChats []int64) *Dispatcher {
 
 func (d *Dispatcher) Register(command string, h Handler) {
 	d.commands[command] = h
+}
+
+// OnText sets the handler for non-slash messages.
+func (d *Dispatcher) OnText(h Handler) {
+	d.onText = h
 }
 
 func (d *Dispatcher) Handle(ctx context.Context, s Sender, update *models.Update) error {
@@ -45,11 +51,19 @@ func (d *Dispatcher) Handle(ctx context.Context, s Sender, update *models.Update
 		return nil
 	}
 
-	cmd := firstToken(msg.Text)
-	if h, ok := d.commands[cmd]; ok {
-		return h(ctx, s, msg)
+	text := strings.TrimSpace(msg.Text)
+	if text == "" {
+		return nil
 	}
-	return d.fallback(ctx, s, msg)
+
+	if strings.HasPrefix(text, "/") {
+		cmd := firstToken(text)
+		if h, ok := d.commands[cmd]; ok {
+			return h(ctx, s, msg)
+		}
+		return d.onUnknownCmd(ctx, s, msg)
+	}
+	return d.onText(ctx, s, msg)
 }
 
 func firstToken(text string) string {
