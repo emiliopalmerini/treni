@@ -11,13 +11,28 @@ import (
 )
 
 type fakeSender struct {
-	mu   sync.Mutex
-	sent []sentMessage
+	mu        sync.Mutex
+	sent      []sentMessage
+	keyboards []sentKeyboard
+	edits     []editedMessage
+	answers   []string
 }
 
 type sentMessage struct {
 	ChatID int64
 	Text   string
+}
+
+type sentKeyboard struct {
+	ChatID  int64
+	Text    string
+	Buttons []bot.Button
+}
+
+type editedMessage struct {
+	ChatID    int64
+	MessageID int
+	Text      string
 }
 
 func (f *fakeSender) SendMessage(_ context.Context, chatID int64, text string) error {
@@ -27,11 +42,56 @@ func (f *fakeSender) SendMessage(_ context.Context, chatID int64, text string) e
 	return nil
 }
 
+func (f *fakeSender) SendMessageWithButtons(_ context.Context, chatID int64, text string, buttons []bot.Button) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.keyboards = append(f.keyboards, sentKeyboard{ChatID: chatID, Text: text, Buttons: buttons})
+	return nil
+}
+
+func (f *fakeSender) EditMessageText(_ context.Context, chatID int64, messageID int, text string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.edits = append(f.edits, editedMessage{ChatID: chatID, MessageID: messageID, Text: text})
+	return nil
+}
+
+func (f *fakeSender) AnswerCallback(_ context.Context, callbackID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.answers = append(f.answers, callbackID)
+	return nil
+}
+
 func (f *fakeSender) messages() []sentMessage {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	out := make([]sentMessage, len(f.sent))
 	copy(out, f.sent)
+	return out
+}
+
+func (f *fakeSender) sentKeyboards() []sentKeyboard {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]sentKeyboard, len(f.keyboards))
+	copy(out, f.keyboards)
+	return out
+}
+
+func (f *fakeSender) editedMessages() []editedMessage {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]editedMessage, len(f.edits))
+	copy(out, f.edits)
+	return out
+}
+
+func (f *fakeSender) answered() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]string, len(f.answers))
+	copy(out, f.answers)
 	return out
 }
 
