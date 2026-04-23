@@ -1,61 +1,46 @@
 # Treni
 
-Train tracking application with real-time status, station information, and historical analytics.
+Telegram bot for Italian train tracking. Users message queries like `S9 Desio`
+and the bot replies with live departures filtered by line.
 
 ## Build and Run
 
 ```bash
-make build          # Build both CLI and server
-make build-cli      # Build CLI only
-make build-server   # Build server only
-make run            # Run web server
-make test           # Run tests
+make build          # Build trenibot binary
+make run            # Build + run (requires env vars below)
+make test           # Run all tests (includes live-API integration tests)
+make test-unit      # Run unit tests only (-short)
 make clean          # Clean build artifacts
 ```
 
-## Code Generation
+## Environment Variables
 
-```bash
-make generate       # Run both sqlc and templ generate
-make sqlc           # Generate SQL queries
-make templ          # Generate templ templates
-```
-
-## CLI Usage
-
-```bash
-./treni train <train_number>     # Get train status
-./treni station <station_code>   # Get station arrivals/departures
-./treni history <train_number>   # Get historical data for a train
-```
+| Var | Required | Description |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | yes | Bot token from @BotFather |
+| `TELEGRAM_ALLOWED_CHAT_IDS` | yes | Comma-separated allowed chat IDs |
+| `STATE_FILE` | no | Path to JSON state file (default `./state.json`) |
 
 ## Project Structure
 
 ```
 cmd/
-  treni/          # CLI application
-  trenid/         # Web server daemon
+  trenibot/       # Bot entry point
 internal/
-  api/            # External API clients (ViaggiaTreno, Trenord)
-  domain/         # Core types (Train, Station, Delay)
-  storage/        # SQLite/Turso repository
-  service/        # Business logic
-web/
-  handlers/       # HTTP handlers
-  templates/      # templ templates
-  static/         # CSS/JS assets
-migrations/       # Database migrations
+  api/            # ViaggiaTreno client + TrainClient interface
+  bot/            # Dispatcher, handlers, Telegram adapter
+  config/         # Env-var loader
+  domain/         # Core types (Train, Station, Departure, Arrival)
+  service/        # Business logic (wraps TrainClient)
+docs/adr/         # Architecture Decision Records
 ```
 
 ## Tech Stack
 
-- Go with chi router
-- SQLite (Turso for production)
-- templ for templates
-- HTMX for interactivity
-- sqlc for type-safe SQL
+- Go 1.26
+- `github.com/go-telegram/bot` for Telegram long-polling
+- No database; optional JSON state file for favorites (future ADR)
 
 ## Data Sources
 
 - ViaggiaTreno (Trenitalia)
-- Trenord API

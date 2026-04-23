@@ -1,5 +1,5 @@
 {
-  description = "Treni - Train tracking web application";
+  description = "Treni - Telegram bot for Italian train tracking";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -24,22 +24,17 @@
         in
         {
           default = pkgs.buildGoModule {
-            pname = "trenid";
-            version = "0.1.0";
+            pname = "trenibot";
+            version = "0.2.0";
             src = ./.;
-            vendorHash = "sha256-n29vH5TFOBJ4wUEjwLeXYOEW5zyhVlVEuui9uRaV3TY=";
+            # First `nix build` will fail and print the real sha256 — paste it here.
+            vendorHash = nixpkgs.lib.fakeHash;
 
-            nativeBuildInputs = [ pkgs.templ ];
-
-            preBuild = ''
-              templ generate
-            '';
-
-            subPackages = [ "cmd/trenid" ];
+            subPackages = [ "cmd/trenibot" ];
 
             meta = {
-              description = "Train tracking web application";
-              mainProgram = "trenid";
+              description = "Telegram bot for Italian train tracking";
+              mainProgram = "trenibot";
             };
           };
         }
@@ -54,7 +49,6 @@
           default = pkgs.mkShell {
             buildInputs = [
               pkgs.go
-              pkgs.templ
               pkgs.golangci-lint
             ];
           };

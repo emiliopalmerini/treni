@@ -1,6 +1,7 @@
 # Binaries
 /treni
 /trenid
+/trenibot
 *.exe
 
 # Database
@@ -27,7 +28,7 @@ bin/
 .env
 .env.local
 
-# Generated
-*_templ.go
+# State
+state.json
 
 .claude
