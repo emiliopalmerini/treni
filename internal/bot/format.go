@@ -8,14 +8,20 @@ import (
 	"github.com/emiliopalmerini/treni/internal/domain"
 )
 
-func formatDepartures(line, stationName string, window time.Duration, deps []domain.Departure) string {
+func formatDepartures(line, stationName string, now time.Time, window time.Duration, deps []domain.Departure) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s at %s (next %d min)\n\n", line, stationName, int(window.Minutes()))
+	fmt.Fprintf(&b, "%s at %s (next %d min, now %s)\n\n",
+		line, stationName, int(window.Minutes()), now.Format("15:04"))
 	for _, d := range deps {
 		b.WriteString(formatRow(d))
 		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func formatEmpty(line, stationName string, now time.Time, window time.Duration) string {
+	return fmt.Sprintf("No %s departures from %s in the next %d min (now %s).",
+		line, stationName, int(window.Minutes()), now.Format("15:04"))
 }
 
 func formatRow(d domain.Departure) string {

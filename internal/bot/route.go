@@ -40,14 +40,14 @@ func routeAfterStation(
 		log.Printf("QueryDepartures %s @ %s: %v", line, station.Code, err)
 		return target.renderText(ctx, s, upstreamDownMsg)
 	}
+	now := svc.Now()
 	if len(deps) == 0 {
-		return target.renderText(ctx, s,
-			"No "+line+" departures from "+station.Name+" in the next "+fmtMin(window)+".")
+		return target.renderText(ctx, s, formatEmpty(line, station.Name, now, window))
 	}
 
 	termini := distinctTermini(deps)
 	if len(termini) == 1 {
-		return target.renderText(ctx, s, formatDepartures(line, station.Name, window, deps))
+		return target.renderText(ctx, s, formatDepartures(line, station.Name, now, window, deps))
 	}
 
 	return target.renderWithButtons(ctx, s,

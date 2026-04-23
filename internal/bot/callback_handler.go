@@ -57,11 +57,12 @@ func NewDirectionHandler(svc QueryService, window time.Duration) CallbackHandler
 		}
 
 		stationName := stationCode // callback data doesn't carry the friendly name
+		now := svc.Now()
 		var text string
 		if len(deps) == 0 {
-			text = "No " + line + " departures from " + stationName + " in the next " + fmtMin(window) + "."
+			text = formatEmpty(line, stationName, now, window)
 		} else {
-			text = formatDepartures(line, stationName, window, deps)
+			text = formatDepartures(line, stationName, now, window, deps)
 		}
 		_ = s.EditMessageText(ctx, chatID, messageID, text)
 		return s.AnswerCallback(ctx, cq.ID)

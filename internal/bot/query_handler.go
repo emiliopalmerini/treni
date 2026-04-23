@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/emiliopalmerini/treni/internal/domain"
@@ -13,6 +12,7 @@ import (
 type QueryService interface {
 	SearchStations(ctx context.Context, query string) ([]domain.Station, error)
 	QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error)
+	Now() time.Time
 }
 
 const (
@@ -63,10 +63,6 @@ func sendStationPicker(ctx context.Context, s Sender, target messageTarget, line
 	}
 	return target.renderWithButtons(ctx, s,
 		"Multiple matches for "+line+". Pick one:", buttons)
-}
-
-func fmtMin(d time.Duration) string {
-	return strconv.Itoa(int(d.Minutes())) + " min"
 }
 
 func truncate(s string, max int) string {

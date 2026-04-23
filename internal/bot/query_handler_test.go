@@ -34,6 +34,10 @@ func (f *fakeQuerySvc) QueryDepartures(ctx context.Context, line, stationCode st
 	return f.departures, f.departuresErr
 }
 
+func (f *fakeQuerySvc) Now() time.Time {
+	return time.Date(2026, 4, 24, 14, 0, 0, 0, time.UTC)
+}
+
 func newTextUpdate(chatID int64, text string) *models.Update {
 	return &models.Update{
 		ID:      1,

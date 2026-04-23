@@ -44,6 +44,10 @@ func (s *Service) SearchStations(ctx context.Context, query string) ([]domain.St
 	return s.api.SearchStation(ctx, query)
 }
 
+func (s *Service) Now() time.Time {
+	return s.now()
+}
+
 // QueryDepartures returns departures from stationCode whose TrainCategory
 // equals line (case-insensitive) and whose ScheduledTime is within
 // [now, now+window]. Results are sorted ascending by ScheduledTime.
