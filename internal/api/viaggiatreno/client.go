@@ -100,8 +100,8 @@ func (c *Client) GetStationRegion(ctx context.Context, stationCode string) (int,
 	return region, nil
 }
 
-func (c *Client) GetDepartures(ctx context.Context, stationCode string) ([]domain.Departure, error) {
-	timestamp := formatTimestamp(time.Now())
+func (c *Client) GetDepartures(ctx context.Context, stationCode string, at time.Time) ([]domain.Departure, error) {
+	timestamp := formatTimestamp(at)
 	endpoint := fmt.Sprintf("%s/partenze/%s/%s", c.baseURL, url.PathEscape(stationCode), url.PathEscape(timestamp))
 
 	body, err := c.doRequest(ctx, endpoint)
@@ -171,7 +171,7 @@ func (c *Client) GetStation(ctx context.Context, stationCode string) (*domain.St
 		return nil, err
 	}
 
-	departures, err := c.GetDepartures(ctx, stationCode)
+	departures, err := c.GetDepartures(ctx, stationCode, time.Now())
 	if err != nil {
 		return nil, err
 	}

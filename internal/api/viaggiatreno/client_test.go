@@ -64,7 +64,7 @@ func TestIntegrationGetDepartures(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	departures, err := client.GetDepartures(ctx, "S08409")
+	departures, err := client.GetDepartures(ctx, "S08409", time.Now())
 	if err != nil {
 		t.Fatalf("GetDepartures failed: %v", err)
 	}

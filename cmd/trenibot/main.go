@@ -27,7 +27,13 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	svc := service.New(viaggiatreno.New())
+	clock := time.Now
+	if !cfg.TimeOverride.IsZero() {
+		fixed := cfg.TimeOverride
+		clock = func() time.Time { return fixed }
+		log.Printf("TIME_OVERRIDE active: clock pinned to %s", fixed.Format(time.RFC3339))
+	}
+	svc := service.NewWithClock(viaggiatreno.New(), clock)
 
 	dispatcher := bot.NewDispatcher(cfg.AllowedChats)
 	dispatcher.OnText(bot.NewQueryHandler(svc, defaultWindow))

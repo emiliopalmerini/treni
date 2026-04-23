@@ -13,6 +13,8 @@ import (
 type fakeClient struct {
 	departures map[string][]domain.Departure
 	err        error
+
+	gotAt time.Time
 }
 
 func (f *fakeClient) GetTrain(ctx context.Context, n string) (*domain.Train, error) {
@@ -24,7 +26,8 @@ func (f *fakeClient) GetStation(ctx context.Context, c string) (*domain.Station,
 func (f *fakeClient) SearchStation(ctx context.Context, q string) ([]domain.Station, error) {
 	return nil, errors.New("not used")
 }
-func (f *fakeClient) GetDepartures(ctx context.Context, stationCode string) ([]domain.Departure, error) {
+func (f *fakeClient) GetDepartures(ctx context.Context, stationCode string, at time.Time) ([]domain.Departure, error) {
+	f.gotAt = at
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -137,5 +140,18 @@ func TestQueryDepartures_propagatesAPIError(t *testing.T) {
 	_, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
 	if !errors.Is(err, want) {
 		t.Fatalf("err = %v, want wraps %v", err, want)
+	}
+}
+
+func TestQueryDepartures_passesClockThroughToAPI(t *testing.T) {
+	fc := &fakeClient{departures: map[string][]domain.Departure{"S123": {}}}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	_, err := svc.QueryDepartures(context.Background(), "S9", "S123", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !fc.gotAt.Equal(fixedNow()) {
+		t.Errorf("client got at=%v, want %v", fc.gotAt, fixedNow())
 	}
 }

@@ -52,11 +52,11 @@ func (s *Service) Now() time.Time {
 // equals line (case-insensitive) and whose ScheduledTime is within
 // [now, now+window]. Results are sorted ascending by ScheduledTime.
 func (s *Service) QueryDepartures(ctx context.Context, line, stationCode string, window time.Duration) ([]domain.Departure, error) {
-	deps, err := s.api.GetDepartures(ctx, stationCode)
+	now := s.now()
+	deps, err := s.api.GetDepartures(ctx, stationCode, now)
 	if err != nil {
 		return nil, err
 	}
-	now := s.now()
 	cutoff := now.Add(window)
 
 	var out []domain.Departure
