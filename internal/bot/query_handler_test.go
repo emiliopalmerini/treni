@@ -27,9 +27,9 @@ func (f *fakeQuerySvc) SearchStations(ctx context.Context, q string) ([]domain.S
 	return f.stations, f.searchErr
 }
 
-func (f *fakeQuerySvc) DeparturesFromTo(ctx context.Context, stationCode, toMatch string, window time.Duration) ([]domain.Departure, error) {
+func (f *fakeQuerySvc) DeparturesVia(ctx context.Context, stationCode, viaMatch string, window time.Duration) ([]domain.Departure, error) {
 	f.gotStation = stationCode
-	f.gotTo = toMatch
+	f.gotTo = viaMatch
 	f.gotWindow = window
 	return f.departures, f.departuresErr
 }

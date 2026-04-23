@@ -11,7 +11,7 @@ import (
 
 type QueryService interface {
 	SearchStations(ctx context.Context, query string) ([]domain.Station, error)
-	DeparturesFromTo(ctx context.Context, stationCode, toMatch string, window time.Duration) ([]domain.Departure, error)
+	DeparturesVia(ctx context.Context, stationCode, viaMatch string, window time.Duration) ([]domain.Departure, error)
 	Now() time.Time
 }
 

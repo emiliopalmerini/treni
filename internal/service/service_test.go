@@ -3,6 +3,8 @@ package service_test
 import (
 	"context"
 	"errors"
+	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,13 +15,28 @@ import (
 type fakeClient struct {
 	departures map[string][]domain.Departure
 	err        error
+	gotAt      time.Time
 
-	gotAt time.Time
+	trains    map[string]*domain.Train
+	trainErrs map[string]error
+
+	mu          sync.Mutex
+	trainCalled []string
 }
 
 func (f *fakeClient) GetTrain(ctx context.Context, n string) (*domain.Train, error) {
-	return nil, errors.New("not used")
+	f.mu.Lock()
+	f.trainCalled = append(f.trainCalled, n)
+	f.mu.Unlock()
+	if err, ok := f.trainErrs[n]; ok {
+		return nil, err
+	}
+	if t, ok := f.trains[n]; ok {
+		return t, nil
+	}
+	return nil, errors.New("train not found")
 }
+
 func (f *fakeClient) GetStation(ctx context.Context, c string) (*domain.Station, error) {
 	return nil, errors.New("not used")
 }
@@ -38,112 +55,188 @@ func fixedNow() time.Time {
 	return time.Date(2026, 4, 25, 8, 0, 0, 0, time.UTC)
 }
 
-func dep(minutesFromNow int, dest string) domain.Departure {
+func dep(number string, minutesFromNow int, dest string) domain.Departure {
 	return domain.Departure{
+		TrainNumber:   number,
 		ScheduledTime: fixedNow().Add(time.Duration(minutesFromNow) * time.Minute),
 		Destination:   dest,
 	}
 }
 
-func TestDeparturesFromTo_substringCaseInsensitive(t *testing.T) {
-	fc := &fakeClient{
-		departures: map[string][]domain.Departure{
-			"DESIO": {
-				dep(10, "Milano Centrale"),
-				dep(15, "Saronno"),
-				dep(20, "Milano Porta Garibaldi"),
-			},
-		},
+func trainWithStops(number string, stops ...string) *domain.Train {
+	s := make([]domain.Stop, len(stops))
+	for i, name := range stops {
+		s[i] = domain.Stop{StationName: name}
 	}
-	svc := service.NewWithClock(fc, fixedNow)
-
-	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "milano", 60*time.Minute)
-	if err != nil {
-		t.Fatalf("DeparturesFromTo: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("got %d, want 2 (both Milano destinations)", len(got))
-	}
+	return &domain.Train{Number: number, Stops: s}
 }
 
-func TestDeparturesFromTo_windowExcludesOutOfRange(t *testing.T) {
+func TestDeparturesVia_matchesIntermediateStop(t *testing.T) {
+	// Train terminates at Albairate, but stops at Milano Porta Garibaldi.
+	// User queries `Desio > Milano` — should match.
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
-			"DESIO": {
-				dep(-5, "Milano"),
-				dep(10, "Milano"),
-				dep(55, "Milano"),
-				dep(65, "Milano"),
-			},
+			"DESIO": {dep("24001", 10, "Albairate")},
+		},
+		trains: map[string]*domain.Train{
+			"24001": trainWithStops("24001", "Desio", "Milano Porta Garibaldi", "Milano Bovisa", "Albairate"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("got %d, want 2 (only in-window)", len(got))
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1 (train stops at Milano)", len(got))
 	}
 }
 
-func TestDeparturesFromTo_sortedAscending(t *testing.T) {
+func TestDeparturesVia_matchesTerminus(t *testing.T) {
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {dep("99999", 10, "Milano Centrale")},
+		},
+		trains: map[string]*domain.Train{
+			"99999": trainWithStops("99999", "Desio", "Milano Centrale"),
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1", len(got))
+	}
+}
+
+func TestDeparturesVia_excludesNonMatchingTrain(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
 			"DESIO": {
-				dep(40, "Milano"),
-				dep(5, "Milano"),
-				dep(20, "Milano"),
+				dep("24001", 10, "Saronno"),  // goes the other way
+				dep("24002", 20, "Albairate"), // stops at Milano
 			},
 		},
-	}
-	svc := service.NewWithClock(fc, fixedNow)
-
-	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 1; i < len(got); i++ {
-		if got[i].ScheduledTime.Before(got[i-1].ScheduledTime) {
-			t.Errorf("not sorted ascending at index %d", i)
-		}
-	}
-}
-
-func TestDeparturesFromTo_noMatchesReturnsEmpty(t *testing.T) {
-	fc := &fakeClient{
-		departures: map[string][]domain.Departure{
-			"DESIO": {dep(10, "Saronno")},
+		trains: map[string]*domain.Train{
+			"24001": trainWithStops("24001", "Desio", "Seveso", "Saronno"),
+			"24002": trainWithStops("24002", "Desio", "Milano Bovisa", "Albairate"),
 		},
 	}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	got, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("got %d, want 0", len(got))
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1 (only the Albairate train passes through Milano)", len(got))
+	}
+	if got[0].TrainNumber != "24002" {
+		t.Errorf("wrong train: %s", got[0].TrainNumber)
 	}
 }
 
-func TestDeparturesFromTo_propagatesAPIError(t *testing.T) {
+func TestDeparturesVia_getTrainFailsFallsBackToTerminus(t *testing.T) {
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {
+				dep("24001", 5, "Milano Centrale"), // GetTrain fails; terminus matches
+				dep("24002", 10, "Saronno"),        // GetTrain fails; terminus doesn't match
+			},
+		},
+		trainErrs: map[string]error{
+			"24001": errors.New("upstream 500"),
+			"24002": errors.New("upstream 500"),
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1 (terminus fallback for failed GetTrain)", len(got))
+	}
+	if got[0].TrainNumber != "24001" {
+		t.Errorf("wrong train: %s", got[0].TrainNumber)
+	}
+}
+
+func TestDeparturesVia_preservesAscendingOrder(t *testing.T) {
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {
+				dep("A", 30, "Milano"),
+				dep("B", 5, "Milano"),
+				dep("C", 15, "Milano"),
+			},
+		},
+		trains: map[string]*domain.Train{
+			"A": trainWithStops("A", "Desio", "Milano"),
+			"B": trainWithStops("B", "Desio", "Milano"),
+			"C": trainWithStops("C", "Desio", "Milano"),
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sort.SliceIsSorted(got, func(i, j int) bool {
+		return got[i].ScheduledTime.Before(got[j].ScheduledTime)
+	}) {
+		t.Errorf("not sorted ascending: %v", got)
+	}
+}
+
+func TestDeparturesVia_windowFilter(t *testing.T) {
+	fc := &fakeClient{
+		departures: map[string][]domain.Departure{
+			"DESIO": {
+				dep("A", -5, "Milano"),
+				dep("B", 10, "Milano"),
+				dep("C", 65, "Milano"),
+			},
+		},
+		trains: map[string]*domain.Train{
+			"A": trainWithStops("A", "Desio", "Milano"),
+			"B": trainWithStops("B", "Desio", "Milano"),
+			"C": trainWithStops("C", "Desio", "Milano"),
+		},
+	}
+	svc := service.NewWithClock(fc, fixedNow)
+
+	got, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1 (only in-window)", len(got))
+	}
+}
+
+func TestDeparturesVia_propagatesDeparturesAPIError(t *testing.T) {
 	want := errors.New("boom")
 	fc := &fakeClient{err: want}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	_, err := svc.DeparturesFromTo(context.Background(), "DESIO", "Milano", 60*time.Minute)
+	_, err := svc.DeparturesVia(context.Background(), "DESIO", "Milano", 60*time.Minute)
 	if !errors.Is(err, want) {
 		t.Fatalf("err = %v, want wraps %v", err, want)
 	}
 }
 
-func TestDeparturesFromTo_passesClockToAPI(t *testing.T) {
+func TestDeparturesVia_passesClockToAPI(t *testing.T) {
 	fc := &fakeClient{departures: map[string][]domain.Departure{"DESIO": {}}}
 	svc := service.NewWithClock(fc, fixedNow)
 
-	_, _ = svc.DeparturesFromTo(context.Background(), "DESIO", "M", 60*time.Minute)
+	_, _ = svc.DeparturesVia(context.Background(), "DESIO", "M", 60*time.Minute)
 
 	if !fc.gotAt.Equal(fixedNow()) {
 		t.Errorf("client got at=%v, want %v", fc.gotAt, fixedNow())

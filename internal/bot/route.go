@@ -34,9 +34,9 @@ func renderDepartures(
 	ctx context.Context, s Sender, svc QueryService,
 	target messageTarget, station domain.Station, to string, window time.Duration,
 ) error {
-	deps, err := svc.DeparturesFromTo(ctx, station.Code, to, window)
+	deps, err := svc.DeparturesVia(ctx, station.Code, to, window)
 	if err != nil {
-		log.Printf("DeparturesFromTo %s → %q: %v", station.Code, to, err)
+		log.Printf("DeparturesVia %s via %q: %v", station.Code, to, err)
 		return target.renderText(ctx, s, upstreamDownMsg)
 	}
 	now := svc.Now()
