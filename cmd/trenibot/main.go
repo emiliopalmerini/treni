@@ -14,6 +14,7 @@ import (
 	"github.com/emiliopalmerini/treni/internal/bot"
 	"github.com/emiliopalmerini/treni/internal/config"
 	"github.com/emiliopalmerini/treni/internal/service"
+	"github.com/emiliopalmerini/treni/internal/state"
 )
 
 const defaultWindow = 60 * time.Minute
@@ -35,9 +36,19 @@ func main() {
 	}
 	svc := service.NewWithClock(viaggiatreno.New(), clock)
 
+	favs, err := state.NewJSONStore(cfg.StateFilePath)
+	if err != nil {
+		log.Fatalf("load state %s: %v", cfg.StateFilePath, err)
+	}
+
 	dispatcher := bot.NewDispatcher(cfg.AllowedChats)
-	dispatcher.OnText(bot.NewQueryHandler(svc, defaultWindow))
+	dispatcher.Register("/save", bot.NewSaveHandler(favs))
+	dispatcher.Register("/unsave", bot.NewUnsaveHandler(favs))
+	dispatcher.Register("/favorites", bot.NewFavoritesHandler(favs))
+	dispatcher.OnText(bot.NewAliasHandler(favs, bot.NewQueryHandler(svc, defaultWindow)))
 	dispatcher.OnCallback("q:", bot.NewCallbackHandler(svc, defaultWindow))
+	dispatcher.OnCallback("fr:", bot.NewFavoritesRunCallback(favs, svc, defaultWindow))
+	dispatcher.OnCallback("fd:", bot.NewFavoritesDeleteCallback(favs))
 
 	var sender bot.Sender
 	defaultHandler := func(hctx context.Context, b *tgbot.Bot, update *models.Update) {
