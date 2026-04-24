@@ -16,7 +16,7 @@ type QueryService interface {
 }
 
 const (
-	formatHint      = "Query format: <FROM> > <TO>. Example: Desio > Milano. /help for more."
+	formatHint      = "Query format: <FROM>: <TO>. Example: Desio: Milano. /help for more."
 	upstreamDownMsg = "Couldn't reach ViaggiaTreno. Try again in a sec."
 
 	maxStationChoices = 5

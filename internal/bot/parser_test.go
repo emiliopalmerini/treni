@@ -10,19 +10,21 @@ func TestParseFromTo(t *testing.T) {
 		wantTo   string
 		wantOK   bool
 	}{
-		{"simple", "Desio > Milano", "Desio", "Milano", true},
-		{"no spaces around arrow", "Desio>Milano", "Desio", "Milano", true},
-		{"multi-word both sides", "Milano Centrale > Brescia Ovest", "Milano Centrale", "Brescia Ovest", true},
-		{"extra whitespace", "  Desio   >   Milano  ", "Desio", "Milano", true},
-		{"case preserved", "desio > milano", "desio", "milano", true},
+		{"simple", "Desio: Milano", "Desio", "Milano", true},
+		{"no spaces around colon", "Desio:Milano", "Desio", "Milano", true},
+		{"multi-word both sides", "Milano Centrale: Brescia Ovest", "Milano Centrale", "Brescia Ovest", true},
+		{"extra whitespace", "  Desio   :   Milano  ", "Desio", "Milano", true},
+		{"case preserved", "desio: milano", "desio", "milano", true},
+		{"stray arrow stays in TO", "Desio : Milano > something", "Desio", "Milano > something", true},
+		{"later colon lands in TO", "Desio : Milano : extra", "Desio", "Milano : extra", true},
 
-		{"no arrow", "Desio Milano", "", "", false},
+		{"no colon", "Desio Milano", "", "", false},
 		{"empty", "", "", "", false},
-		{"arrow only", ">", "", "", false},
-		{"empty left", "> Milano", "", "", false},
-		{"empty right", "Desio >", "", "", false},
-		{"whitespace left", "  > Milano", "", "", false},
-		{"whitespace right", "Desio >   ", "", "", false},
+		{"colon only", ":", "", "", false},
+		{"empty left", ": Milano", "", "", false},
+		{"empty right", "Desio :", "", "", false},
+		{"whitespace left", "  : Milano", "", "", false},
+		{"whitespace right", "Desio :   ", "", "", false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

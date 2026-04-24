@@ -10,13 +10,15 @@ import (
 const favoriteNameMaxLen = 32
 
 var (
-	ErrSaveUsage           = errors.New("usage: /save <name> <FROM> > <TO>")
+	ErrSaveUsage           = errors.New("usage: /save <name> <FROM>: <TO>")
 	ErrUnsaveUsage         = errors.New("usage: /unsave <name>")
 	ErrInvalidFavoriteName = errors.New("invalid favorite name")
 )
 
-// ValidateFavoriteName enforces the rules from ADR-013 §Nickname rules:
-// 1–32 chars, no whitespace, no '>', does not start with '/'.
+// ValidateFavoriteName enforces the nickname rules from ADR-013, as
+// amended by ADR-014: 1–32 chars, no whitespace, no ':' (the query
+// separator; would collide with the alias shim), no '>', does not
+// start with '/'.
 func ValidateFavoriteName(name string) error {
 	if name == "" || len(name) > favoriteNameMaxLen {
 		return ErrInvalidFavoriteName
@@ -24,13 +26,13 @@ func ValidateFavoriteName(name string) error {
 	if strings.HasPrefix(name, "/") {
 		return ErrInvalidFavoriteName
 	}
-	if strings.ContainsAny(name, " \t\n\r>") {
+	if strings.ContainsAny(name, " \t\n\r:>") {
 		return ErrInvalidFavoriteName
 	}
 	return nil
 }
 
-// parseSaveCommand parses "/save <name> <FROM> > <TO>" into its parts.
+// parseSaveCommand parses "/save <name> <FROM>: <TO>" into its parts.
 // Name is lowercased. Returns ErrSaveUsage when the grammar is off,
 // ErrInvalidFavoriteName when the name fails validation.
 func parseSaveCommand(text string) (name, from, to string, err error) {

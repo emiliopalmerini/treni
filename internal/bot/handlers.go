@@ -6,16 +6,16 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-const startText = "Ciao. Send me <FROM> > <TO> (e.g. Desio > Milano) to see departures.\n/help for commands and favorites."
+const startText = "Ciao. Send me <FROM>: <TO> (e.g. Desio: Milano) to see departures.\n/help for commands and favorites."
 
 const helpText = `Query:
-  <FROM> > <TO>        e.g. Desio > Milano
+  <FROM>: <TO>        e.g. Desio: Milano
 
 Favorites (per chat, max 10):
-  /save <name> <FROM> > <TO>   save a route
-  /unsave <name>               delete a saved route
-  /favorites                   list saved routes
-  <name>                       run a saved route
+  /save <name> <FROM>: <TO>   save a route
+  /unsave <name>              delete a saved route
+  /favorites                  list saved routes
+  <name>                      run a saved route
 
 Times are the next 60 min from now.`
 

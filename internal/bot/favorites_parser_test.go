@@ -20,6 +20,7 @@ func TestValidateFavoriteName(t *testing.T) {
 		{"empty", "", false},
 		{"contains space", "my home", false},
 		{"contains tab", "my\thome", false},
+		{"contains colon", "home:work", false},
 		{"contains arrow", "home>work", false},
 		{"slash prefix", "/home", false},
 		{"too long", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false}, // 33 chars
@@ -45,28 +46,28 @@ func TestParseSaveCommand(t *testing.T) {
 	}{
 		{
 			label:    "happy path",
-			input:    "/save home Desio > Milano",
+			input:    "/save home Desio: Milano",
 			wantName: "home",
 			wantFrom: "Desio",
 			wantTo:   "Milano",
 		},
 		{
 			label:    "multi-word FROM and TO",
-			input:    "/save office Milano Centrale > Brescia Ovest",
+			input:    "/save office Milano Centrale: Brescia Ovest",
 			wantName: "office",
 			wantFrom: "Milano Centrale",
 			wantTo:   "Brescia Ovest",
 		},
 		{
 			label:    "extra whitespace",
-			input:    "/save   home    Desio   >   Milano  ",
+			input:    "/save   home    Desio   :   Milano  ",
 			wantName: "home",
 			wantFrom: "Desio",
 			wantTo:   "Milano",
 		},
 		{
 			label:    "name lowercased",
-			input:    "/save HOME Desio > Milano",
+			input:    "/save HOME Desio: Milano",
 			wantName: "home",
 			wantFrom: "Desio",
 			wantTo:   "Milano",
@@ -74,11 +75,11 @@ func TestParseSaveCommand(t *testing.T) {
 
 		{label: "no args", input: "/save", wantErr: ErrSaveUsage},
 		{label: "only name", input: "/save home", wantErr: ErrSaveUsage},
-		{label: "missing arrow", input: "/save home Desio Milano", wantErr: ErrSaveUsage},
-		{label: "empty FROM", input: "/save home > Milano", wantErr: ErrSaveUsage},
-		{label: "empty TO", input: "/save home Desio >", wantErr: ErrSaveUsage},
-		{label: "invalid name with arrow", input: "/save ho>me Desio > Milano", wantErr: ErrInvalidFavoriteName},
-		{label: "invalid name slash prefix", input: "/save /home Desio > Milano", wantErr: ErrInvalidFavoriteName},
+		{label: "missing colon", input: "/save home Desio Milano", wantErr: ErrSaveUsage},
+		{label: "empty FROM", input: "/save home : Milano", wantErr: ErrSaveUsage},
+		{label: "empty TO", input: "/save home Desio :", wantErr: ErrSaveUsage},
+		{label: "invalid name with colon", input: "/save ho:me Desio: Milano", wantErr: ErrInvalidFavoriteName},
+		{label: "invalid name slash prefix", input: "/save /home Desio: Milano", wantErr: ErrInvalidFavoriteName},
 	}
 	for _, tc := range tests {
 		t.Run(tc.label, func(t *testing.T) {

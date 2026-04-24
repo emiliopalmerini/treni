@@ -61,7 +61,7 @@ func TestQueryHandler_successPath(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	if err := d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano")); err != nil {
+	if err := d.Handle(context.Background(), sender, newTextUpdate(42, "Desio: Milano")); err != nil {
 		t.Fatalf("Handle: %v", err)
 	}
 
@@ -93,7 +93,7 @@ func TestQueryHandler_noStation(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "NotARealPlace > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "NotARealPlace: Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
@@ -113,7 +113,7 @@ func TestQueryHandler_noDepartures(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio: Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {
@@ -134,7 +134,7 @@ func TestQueryHandler_searchError(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Desio: Milano"))
 
 	msgs := sender.messages()
 	if len(msgs) != 1 {

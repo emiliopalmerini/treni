@@ -76,7 +76,7 @@ func TestSaveHandler_savesAndConfirms(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.Register("/save", bot.NewSaveHandler(favs))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save home Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save home Desio: Milano"))
 
 	got, ok := favs.Get(42, "home")
 	if !ok {
@@ -103,7 +103,7 @@ func TestSaveHandler_overwriteReplies_updated(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.Register("/save", bot.NewSaveHandler(favs))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save home Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save home Desio: Milano"))
 
 	got, _ := favs.Get(42, "home")
 	if got.From != "Desio" {
@@ -138,7 +138,7 @@ func TestSaveHandler_invalidName(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.Register("/save", bot.NewSaveHandler(favs))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save /home Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save /home Desio: Milano"))
 
 	if len(favs.List(42)) != 0 {
 		t.Error("invalid name should not save")
@@ -159,7 +159,7 @@ func TestSaveHandler_atCap(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.Register("/save", bot.NewSaveHandler(favs))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save eleventh Desio > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "/save eleventh Desio: Milano"))
 
 	if _, ok := favs.Get(42, "eleventh"); ok {
 		t.Error("11th favorite should not be saved")
@@ -434,10 +434,10 @@ func TestAliasHandler_caseInsensitive(t *testing.T) {
 	}
 }
 
-func TestAliasHandler_passesThroughWhenMessageHasArrow(t *testing.T) {
+func TestAliasHandler_passesThroughWhenMessageHasColon(t *testing.T) {
 	favs := newFakeFavStore()
-	// Even if a favorite named "milano" exists, `milano > bergamo` must
-	// go to the query handler because it contains `>`.
+	// Even if a favorite named "milano" exists, `milano: bergamo` must
+	// go to the query handler because it contains `:`.
 	_ = favs.Save(42, domain.Favorite{Name: "milano", From: "Wrong", To: "Wrong"})
 
 	query := &fakeQuerySvc{
@@ -447,10 +447,10 @@ func TestAliasHandler_passesThroughWhenMessageHasArrow(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewAliasHandler(favs, bot.NewQueryHandler(query, 60*time.Minute)))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Milano > Bergamo"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Milano: Bergamo"))
 
 	if query.gotStation != "MILANO" {
-		t.Errorf("message with > should go to query handler; got station=%q", query.gotStation)
+		t.Errorf("message with : should go to query handler; got station=%q", query.gotStation)
 	}
 	if query.gotTo != "Bergamo" {
 		t.Errorf("TO should be 'Bergamo', got %q", query.gotTo)
@@ -506,8 +506,8 @@ func TestStart_usesFromToGrammar(t *testing.T) {
 	if strings.Contains(msg, "S9 Desio") {
 		t.Errorf("/start still references pre-ADR-010 grammar: %q", msg)
 	}
-	if !strings.Contains(msg, ">") {
-		t.Errorf("/start should show the FROM > TO grammar: %q", msg)
+	if !strings.Contains(msg, ":") {
+		t.Errorf("/start should show the FROM:TO grammar: %q", msg)
 	}
 }
 
@@ -538,7 +538,7 @@ func TestFavorites_acceptanceRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Save
-	_ = d.Handle(ctx, sender, newTextUpdate(42, "/save home Desio > Milano"))
+	_ = d.Handle(ctx, sender, newTextUpdate(42, "/save home Desio: Milano"))
 	if _, ok := favs.Get(42, "home"); !ok {
 		t.Fatal("step 1: save didn't persist")
 	}

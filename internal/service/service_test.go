@@ -71,10 +71,9 @@ func trainWithStops(number string, stops ...string) *domain.Train {
 	return &domain.Train{Number: number, Stops: s}
 }
 
-
 func TestDeparturesVia_matchesIntermediateStop(t *testing.T) {
 	// Train terminates at Albairate, but stops at Milano Porta Garibaldi
-	// AFTER Desio. User queries `Desio > Milano` — should match.
+	// AFTER Desio. User queries `Desio : Milano` — should match.
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
 			"DESIO": {dep("24001", 10, "Albairate")},
@@ -96,7 +95,7 @@ func TestDeparturesVia_matchesIntermediateStop(t *testing.T) {
 
 func TestDeparturesVia_excludesReverseDirection(t *testing.T) {
 	// Milano appears BEFORE Desio in the stop list: train is heading
-	// *away* from Milano. Must NOT match `Desio > Milano`.
+	// *away* from Milano. Must NOT match `Desio : Milano`.
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
 			"DESIO": {dep("24003", 10, "Saronno")},
@@ -125,11 +124,11 @@ func TestDeparturesVia_fromNotInStopsFallsBackToTerminus(t *testing.T) {
 		departures: map[string][]domain.Departure{
 			"DESIO": {
 				dep("A", 10, "Milano Centrale"), // terminus matches
-				dep("B", 20, "Saronno"),          // terminus doesn't match
+				dep("B", 20, "Saronno"),         // terminus doesn't match
 			},
 		},
 		trains: map[string]*domain.Train{
-			"A": trainWithStops("A", "Seregno", "Milano Centrale"), // no DESIO
+			"A": trainWithStops("A", "Seregno", "Milano Centrale"),   // no DESIO
 			"B": trainWithStops("B", "Milano", "Seregno", "Saronno"), // Milano before unrelated stop
 		},
 	}
@@ -168,7 +167,7 @@ func TestDeparturesVia_excludesNonMatchingTrain(t *testing.T) {
 	fc := &fakeClient{
 		departures: map[string][]domain.Departure{
 			"DESIO": {
-				dep("24001", 10, "Saronno"),  // goes the other way
+				dep("24001", 10, "Saronno"),   // goes the other way
 				dep("24002", 20, "Albairate"), // stops at Milano
 			},
 		},

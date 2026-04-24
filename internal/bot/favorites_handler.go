@@ -24,7 +24,7 @@ type FavoritesStore interface {
 }
 
 const (
-	favoritesEmptyText = "No favorites yet. Use /save <name> <FROM> > <TO>."
+	favoritesEmptyText = "No favorites yet. Use /save <name> <FROM>: <TO>."
 
 	favRunCallback    = "fr:"
 	favDeleteCallback = "fd:"
@@ -50,7 +50,7 @@ func NewSaveHandler(favs FavoritesStore) Handler {
 		if existed {
 			verb = "Updated"
 		}
-		return s.SendMessage(ctx, msg.Chat.ID, fmt.Sprintf("%s '%s': %s > %s.", verb, name, from, to))
+		return s.SendMessage(ctx, msg.Chat.ID, fmt.Sprintf("%s '%s': %s: %s.", verb, name, from, to))
 	}
 }
 
@@ -125,12 +125,12 @@ func NewFavoritesDeleteCallback(favs FavoritesStore) CallbackHandler {
 }
 
 // NewAliasHandler lets a plain message `<name>` resolve to a saved
-// route and then run the query. Messages containing `>` bypass the
-// lookup so the existing ADR-010 grammar stays authoritative.
+// route and then run the query. Messages containing `:` bypass the
+// lookup so the ADR-014 query grammar stays authoritative.
 func NewAliasHandler(favs FavoritesStore, next Handler) Handler {
 	return func(ctx context.Context, s Sender, msg *models.Message) error {
 		text := strings.TrimSpace(msg.Text)
-		if strings.Contains(text, ">") {
+		if strings.Contains(text, ":") {
 			return next(ctx, s, msg)
 		}
 		fav, ok := favs.Get(msg.Chat.ID, text)
@@ -140,7 +140,7 @@ func NewAliasHandler(favs FavoritesStore, next Handler) Handler {
 		// Rewrite the message into the canonical query grammar and
 		// hand it to the existing query handler.
 		aliased := *msg
-		aliased.Text = fav.From + " > " + fav.To
+		aliased.Text = fav.From + ": " + fav.To
 		return next(ctx, s, &aliased)
 	}
 }
@@ -170,7 +170,7 @@ func renderFavoritesList(list []domain.Favorite) (string, []Button) {
 	sb.WriteString("Saved routes (this chat):\n\n")
 	buttons := make([]Button, 0, len(list)*2)
 	for _, fav := range list {
-		sb.WriteString(fmt.Sprintf("%s — %s > %s\n", fav.Name, fav.From, fav.To))
+		sb.WriteString(fmt.Sprintf("%s — %s: %s\n", fav.Name, fav.From, fav.To))
 		buttons = append(buttons,
 			Button{Text: "▶ " + fav.Name, Data: favRunCallback + fav.Name},
 			Button{Text: "🗑 " + fav.Name, Data: favDeleteCallback + fav.Name},
@@ -182,18 +182,18 @@ func renderFavoritesList(list []domain.Favorite) (string, []Button) {
 func saveErrorReply(err error) string {
 	switch {
 	case errors.Is(err, ErrInvalidFavoriteName):
-		return "Invalid name. Use 1–32 chars, no spaces, no '>'."
+		return "Invalid name. Use 1–32 chars, no spaces, no ':'."
 	case errors.Is(err, ErrSaveUsage):
-		return "Usage: /save <name> <FROM> > <TO>."
+		return "Usage: /save <name> <FROM>: <TO>."
 	default:
-		return "Usage: /save <name> <FROM> > <TO>."
+		return "Usage: /save <name> <FROM>: <TO>."
 	}
 }
 
 func unsaveErrorReply(err error) string {
 	switch {
 	case errors.Is(err, ErrInvalidFavoriteName):
-		return "Invalid name. Use 1–32 chars, no spaces, no '>'."
+		return "Invalid name. Use 1–32 chars, no spaces, no ':'."
 	case errors.Is(err, ErrUnsaveUsage):
 		return "Usage: /unsave <name>."
 	default:

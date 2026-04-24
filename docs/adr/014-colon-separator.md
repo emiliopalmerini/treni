@@ -1,7 +1,7 @@
 # ADR-014: Switch Query Separator from `>` to `:`
 
 ## Status
-Proposed (amends ADR-010; touches ADR-013 copy)
+Accepted (amends ADR-010; touches ADR-013 copy)
 
 ## Context
 ADR-010 introduced the `<FROM> > <TO>` grammar. In day-to-day use the

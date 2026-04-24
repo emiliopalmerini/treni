@@ -35,7 +35,7 @@ func TestQueryHandler_multipleStationsShowsPicker(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Milano > Brescia"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "Milano: Brescia"))
 
 	if len(sender.messages()) != 0 {
 		t.Errorf("expected no plain messages, got %d", len(sender.messages()))
@@ -72,7 +72,7 @@ func TestQueryHandler_cappedAtMaxChoices(t *testing.T) {
 	d := bot.NewDispatcher([]int64{42})
 	d.OnText(bot.NewQueryHandler(fc, 60*time.Minute))
 
-	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "San > Milano"))
+	_ = d.Handle(context.Background(), sender, newTextUpdate(42, "San: Milano"))
 
 	kbs := sender.sentKeyboards()
 	if len(kbs) != 1 {
